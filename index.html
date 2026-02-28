@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎡 عجلة أبطال sin cos tan 🎡</title>
+<title>🎡 عجلة أبطال sin cos tan</title>
 
 <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/2103/2103633.png">
 
@@ -19,7 +19,13 @@ body{
 
 h1{
     margin-top:20px;
-    text-shadow:0 0 20px cyan;
+    text-shadow:0 0 20px cyan,0 0 40px magenta;
+    animation:glow 2s infinite alternate;
+}
+
+@keyframes glow{
+    from{ text-shadow:0 0 10px cyan; }
+    to{ text-shadow:0 0 30px magenta; }
 }
 
 .score-box{
@@ -47,8 +53,8 @@ h1{
     border-radius:50%;
     border:8px solid white;
     position:relative;
-    box-shadow:0 0 20px cyan,0 0 40px magenta,0 0 60px cyan;
-    transition: transform 5s cubic-bezier(0.17, 0.67, 0.12, 1);
+    box-shadow:0 0 20px cyan,0 0 40px magenta;
+    transition: transform 4s cubic-bezier(0.17,0.67,0.12,0.99);
 }
 
 .pointer{
@@ -68,8 +74,8 @@ h1{
     border-radius:20px;
     width:320px;
     transition:0.4s;
-    box-shadow:0 0 40px cyan;
     color:black;
+    box-shadow:0 0 40px white;
 }
 
 #question-box.show{
@@ -85,6 +91,7 @@ h1{
     border-radius:10px;
     font-size:16px;
     cursor:pointer;
+    font-weight:bold;
 }
 
 button{
@@ -145,6 +152,7 @@ button:hover{
 let score=0;
 let rotation=0;
 let spinning=false;
+let selectedIndex=0;
 
 let questions=[
 {q:"sin(0)",a:"0"},
@@ -165,9 +173,9 @@ function drawWheel(){
     wheel.innerHTML="";
     let total=questions.length;
     let angle=360/total;
-
     let gradient="conic-gradient(";
     colors=[];
+
     for(let i=0;i<total;i++){
         let color=`hsl(${i*360/total},70%,60%)`;
         colors.push(color);
@@ -195,31 +203,32 @@ function drawWheel(){
 drawWheel();
 
 function spinWheel(){
+
     if(spinning || questions.length===0) return;
+
     spinning=true;
     document.getElementById("spinBtn").disabled=true;
+
+    selectedIndex=Math.floor(Math.random()*questions.length);
 
     let total=questions.length;
     let angle=360/total;
 
-    let selectedIndex=Math.floor(Math.random()*total);
+    let stopAngle=(360 - (selectedIndex*angle) - angle/2);
 
-    let finalAngle = (360 - (selectedIndex*angle) - angle/2);
+    let extraSpins=360*5; // عدد لفات كاملة
 
-    let spins = 5; // عدد اللفات الكاملة
-    let totalRotation = (360*spins) + finalAngle;
+    rotation += extraSpins + stopAngle;
 
-    rotation += totalRotation;
-
-    wheel.style.transform = `rotate(${rotation}deg)`;
+    wheel.style.transform=`rotate(${rotation}deg)`;
 
     setTimeout(()=>{
         showQuestion(selectedIndex);
-        spinning=false;
-    },5000);
+    },4000);
 }
 
 function showQuestion(index){
+
     document.getElementById("question-box").classList.add("show");
     document.getElementById("question-box").style.background = colors[index];
 
@@ -264,6 +273,7 @@ function checkAnswer(option,index){
         document.getElementById("question-box").classList.remove("show");
         document.getElementById("result").innerText="";
         document.getElementById("spinBtn").disabled=false;
+        spinning=false;
         drawWheel();
     },2000);
 }
@@ -280,5 +290,6 @@ function explode(){
 }
 
 </script>
+
 </body>
 </html>
