@@ -3,155 +3,175 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🔥 لعبة أبطال المثلثات 🔥</title>
+<title>🎡 عجلة أبطال المثلثات</title>
 
 <style>
 
-/* خلفية متحركة رهيبة */
-body {
-    margin: 0;
-    font-family: 'Cairo', sans-serif;
-    background: linear-gradient(-45deg, #1e3c72, #2a5298, #0f2027, #203a43);
-    background-size: 400% 400%;
-    animation: gradientBG 10s ease infinite;
-    text-align: center;
-    color: white;
+body{
+    margin:0;
+    background: radial-gradient(circle at top,#0f2027,#203a43,#2c5364);
+    font-family: Arial;
+    text-align:center;
+    color:white;
+    overflow:hidden;
 }
 
-@keyframes gradientBG {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+h1{
+    margin-top:20px;
+    font-size:35px;
+    text-shadow:0 0 20px cyan;
 }
 
-h1 {
-    margin-top: 20px;
-    font-size: 40px;
-    text-shadow: 0 0 20px #00ffff;
-    animation: glow 2s infinite alternate;
+.wheel-container{
+    position:relative;
+    width:350px;
+    height:350px;
+    margin:30px auto;
 }
 
-@keyframes glow {
-    from { text-shadow: 0 0 10px #00ffff; }
-    to { text-shadow: 0 0 30px #00ffff; }
+.wheel{
+    width:100%;
+    height:100%;
+    border-radius:50%;
+    border:10px solid white;
+    transition: transform 4s ease-out;
+    background: conic-gradient(
+        #ff7675 0% 10%,
+        #74b9ff 10% 20%,
+        #55efc4 20% 30%,
+        #ffeaa7 30% 40%,
+        #a29bfe 40% 50%,
+        #fab1a0 50% 60%,
+        #81ecec 60% 70%,
+        #fd79a8 70% 80%,
+        #00cec9 80% 90%,
+        #e17055 90% 100%
+    );
 }
 
-.game-box {
-    background: rgba(255,255,255,0.1);
-    padding: 30px;
-    margin: 40px auto;
-    width: 350px;
-    border-radius: 20px;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 0 30px rgba(0,0,0,0.5);
-    animation: float 3s ease-in-out infinite;
+.pointer{
+    position:absolute;
+    top:-20px;
+    left:50%;
+    transform:translateX(-50%);
+    font-size:40px;
 }
 
-@keyframes float {
-    0% { transform: translateY(0px); }
-    50% { transform: translateY(-15px); }
-    100% { transform: translateY(0px); }
+button{
+    padding:12px 25px;
+    border:none;
+    border-radius:10px;
+    font-size:18px;
+    background:cyan;
+    cursor:pointer;
+    margin-top:15px;
+    font-weight:bold;
 }
 
-button {
-    padding: 10px 20px;
-    margin: 10px;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    font-size: 18px;
-    transition: 0.3s;
-    background: #00ffff;
-    color: black;
-    font-weight: bold;
+button:hover{
+    background:magenta;
+    color:white;
 }
 
-button:hover {
-    transform: scale(1.1);
-    background: #ff00ff;
-    color: white;
+#question-box{
+    margin-top:20px;
 }
 
-.score {
-    font-size: 22px;
-    margin-top: 15px;
+.answer-btn{
+    display:block;
+    margin:10px auto;
+    padding:10px;
+    width:200px;
 }
 
-.result {
-    font-size: 24px;
-    margin-top: 15px;
-    font-weight: bold;
+.score{
+    margin-top:15px;
+    font-size:20px;
 }
 
 </style>
 </head>
-
 <body>
 
-<h1>🎮 أبطال sin - cos - tan 🎮</h1>
+<h1>🎡 عجلة أبطال sin cos tan 🎡</h1>
 
-<div class="game-box">
-    <h2 id="question">...</h2>
-    <div id="answers"></div>
-    <div class="result" id="result"></div>
-    <div class="score">النقاط: <span id="score">0</span></div>
+<div class="wheel-container">
+    <div class="pointer">▼</div>
+    <div class="wheel" id="wheel"></div>
 </div>
+
+<button onclick="spinWheel()">لف العجلة</button>
+
+<div id="question-box"></div>
+<div class="score">النقاط: <span id="score">0</span></div>
 
 <script>
 
 let score = 0;
+let currentRotation = 0;
 
-function newQuestion() {
+const questions = [
+{q:"sin(30°)",a:"0.5"},
+{q:"cos(60°)",a:"0.5"},
+{q:"tan(45°)",a:"1"},
+{q:"sin(90°)",a:"1"},
+{q:"cos(0°)",a:"1"},
+{q:"tan(0°)",a:"0"},
+{q:"sin(45°)",a:"0.71"},
+{q:"cos(45°)",a:"0.71"},
+{q:"tan(30°)",a:"0.58"},
+{q:"tan(60°)",a:"1.73"}
+];
 
-    const angles = [0, 30, 45, 60, 90];
-    const functions = ["sin", "cos", "tan"];
+function spinWheel(){
 
-    const angle = angles[Math.floor(Math.random() * angles.length)];
-    const func = functions[Math.floor(Math.random() * functions.length)];
+    const randomIndex = Math.floor(Math.random()*10);
+    const degreesPerSection = 360/10;
+    const spinDegrees = 360*5 + (randomIndex*degreesPerSection);
 
-    document.getElementById("question").innerHTML =
-        `احسب ${func}(${angle}°)`;
+    currentRotation += spinDegrees;
+    document.getElementById("wheel").style.transform =
+        "rotate(" + currentRotation + "deg)";
 
-    let correct;
-
-    const rad = angle * Math.PI / 180;
-
-    if (func === "sin") correct = Math.sin(rad);
-    if (func === "cos") correct = Math.cos(rad);
-    if (func === "tan") correct = Math.tan(rad);
-
-    correct = parseFloat(correct.toFixed(2));
-
-    let options = [correct];
-
-    while (options.length < 4) {
-        let fake = parseFloat((Math.random()*2 - 1).toFixed(2));
-        if (!options.includes(fake)) options.push(fake);
-    }
-
-    options.sort(() => Math.random() - 0.5);
-
-    const answersDiv = document.getElementById("answers");
-    answersDiv.innerHTML = "";
-
-    options.forEach(option => {
-        const btn = document.createElement("button");
-        btn.innerText = option;
-        btn.onclick = function() {
-            if (option === correct) {
-                document.getElementById("result").innerText = "🔥 صحيح!";
-                score++;
-            } else {
-                document.getElementById("result").innerText = "❌ خطأ!";
-            }
-            document.getElementById("score").innerText = score;
-            setTimeout(newQuestion, 1000);
-        };
-        answersDiv.appendChild(btn);
-    });
+    setTimeout(()=>{
+        showQuestion(randomIndex);
+    },4000);
 }
 
-newQuestion();
+function showQuestion(index){
+
+    const box = document.getElementById("question-box");
+    box.innerHTML = "";
+
+    const q = document.createElement("h2");
+    q.innerText = "احسب " + questions[index].q;
+    box.appendChild(q);
+
+    let options = [questions[index].a];
+
+    while(options.length<4){
+        let fake = (Math.random()*2).toFixed(2);
+        if(!options.includes(fake)) options.push(fake);
+    }
+
+    options.sort(()=>Math.random()-0.5);
+
+    options.forEach(option=>{
+        const btn = document.createElement("button");
+        btn.className="answer-btn";
+        btn.innerText = option;
+        btn.onclick=function(){
+            if(option===questions[index].a){
+                alert("🔥 صحيح!");
+                score++;
+            }else{
+                alert("❌ خطأ!");
+            }
+            document.getElementById("score").innerText=score;
+        };
+        box.appendChild(btn);
+    });
+}
 
 </script>
 
