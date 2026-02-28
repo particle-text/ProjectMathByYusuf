@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🎡 عجلة أبطال المثلثات</title>
 
+<!-- شعار الصفحة -->
+<link rel="icon" href="https://cdn-icons-png.flaticon.com/512/2103/2103633.png">
+
 <style>
 
 body{
@@ -34,6 +37,7 @@ h1{
     box-shadow:0 0 20px cyan;
 }
 
+/* العجلة */
 .wheel-container{
     position:relative;
     width:380px;
@@ -48,6 +52,7 @@ h1{
     border:8px solid white;
     position:relative;
     transition:transform 0.1s linear;
+    box-shadow: 0 0 20px cyan, 0 0 40px magenta, 0 0 60px cyan;
 }
 
 .pointer{
@@ -69,6 +74,7 @@ h1{
     width:320px;
     transition:0.4s;
     box-shadow:0 0 40px cyan;
+    color:black;
 }
 
 #question-box.show{
@@ -149,19 +155,19 @@ let spinning=false;
 let selectedIndex=0;
 
 let questions=[
-{q:"sin(30°)",a:"0.5"},
-{q:"cos(60°)",a:"0.5"},
-{q:"tan(45°)",a:"1"},
-{q:"sin(90°)",a:"1"},
-{q:"cos(0°)",a:"1"},
-{q:"tan(0°)",a:"0"},
-{q:"sin(45°)",a:"0.71"},
-{q:"cos(45°)",a:"0.71"},
-{q:"tan(30°)",a:"0.58"},
-{q:"tan(60°)",a:"1.73"}
+{q:"sin(0)",a:"0"},
+{q:"cos(0)",a:"1"},
+{q:"tan(0)",a:"0"},
+{q:"sin(90)",a:"1"},
+{q:"cos(90)",a:"0"},
+{q:"tan(90)",a:"∞"},
+{q:"sin(30)",a:"0.5"},
+{q:"cos(60)",a:"0.5"},
+{q:"tan(45)",a:"1"}
 ];
 
 const wheel=document.getElementById("wheel");
+let colors=[];
 
 function drawWheel(){
 
@@ -171,8 +177,10 @@ let total=questions.length;
 let angle=360/total;
 
 let gradient="conic-gradient(";
+colors=[];
 for(let i=0;i<total;i++){
 let color=`hsl(${i*360/total},70%,60%)`;
+colors.push(color);
 gradient+=`${color} ${i*angle}deg ${(i+1)*angle}deg`;
 if(i<total-1) gradient+=",";
 }
@@ -245,6 +253,9 @@ showQuestion(selectedIndex);
 function showQuestion(index){
 
 document.getElementById("question-box").classList.add("show");
+
+/* لون خلفية السؤال مطابق للون قطعة العجلة */
+document.getElementById("question-box").style.background = colors[index];
 
 let question=questions[index];
 document.getElementById("question").innerText="احسب "+question.q;
