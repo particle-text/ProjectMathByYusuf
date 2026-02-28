@@ -1,1 +1,283 @@
 
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎡 عجلة أبطال المثلثات</title>
+
+<!-- شعار الصفحة -->
+<link rel="icon" href="https://cdn-icons-png.flaticon.com/512/2103/2103633.png">
+
+<style>
+
+body{
+    margin:0;
+    font-family:Arial;
+    text-align:center;
+    background: radial-gradient(circle,#0f2027,#203a43,#2c5364);
+    color:white;
+    overflow:hidden;
+}
+
+h1{
+    margin-top:20px;
+    text-shadow:0 0 20px cyan;
+}
+
+/* العجلة */
+.wheel-container{
+    perspective:1000px;
+    width:350px;
+    height:350px;
+    margin:30px auto;
+    transition:0.5s;
+}
+
+.wheel{
+    width:100%;
+    height:100%;
+    border-radius:50%;
+    border:8px solid white;
+    transition: transform 4s cubic-bezier(.17,.67,.83,.67);
+    transform-style:preserve-3d;
+    background:conic-gradient(
+        #ff7675 0% 10%, #74b9ff 10% 20%,
+        #55efc4 20% 30%, #ffeaa7 30% 40%,
+        #a29bfe 40% 50%, #fab1a0 50% 60%,
+        #81ecec 60% 70%, #fd79a8 70% 80%,
+        #00cec9 80% 90%, #e17055 90% 100%
+    );
+}
+
+.pointer{
+    position:absolute;
+    top:-20px;
+    left:50%;
+    transform:translateX(-50%);
+    font-size:40px;
+}
+
+/* أزرار */
+button{
+    padding:12px 25px;
+    border:none;
+    border-radius:10px;
+    font-size:18px;
+    background:cyan;
+    cursor:pointer;
+    margin:10px;
+    font-weight:bold;
+}
+
+button:hover{
+    background:magenta;
+    color:white;
+}
+
+#question-box{
+    display:none;
+    margin-top:30px;
+}
+
+.answer-btn{
+    display:block;
+    margin:10px auto;
+    width:200px;
+}
+
+.result-message{
+    font-size:22px;
+    margin-top:15px;
+}
+
+.timer{
+    font-size:20px;
+    margin-top:10px;
+}
+
+.level{
+    margin-top:10px;
+}
+
+/* انفجار ألوان */
+.confetti{
+    position:fixed;
+    width:10px;
+    height:10px;
+    background:red;
+    top:0;
+    animation:fall 3s linear forwards;
+}
+
+@keyframes fall{
+    to{
+        transform:translateY(100vh) rotate(720deg);
+        opacity:0;
+    }
+}
+
+</style>
+</head>
+<body>
+
+<h1>🎡 عجلة أبطال sin cos tan 🎡</h1>
+
+<div class="wheel-container" id="wheelContainer">
+    <div class="pointer">▼</div>
+    <div class="wheel" id="wheel"></div>
+</div>
+
+<button onclick="spinWheel()" id="spinBtn">لف العجلة</button>
+
+<div id="question-box">
+    <h2 id="question"></h2>
+    <div id="answers"></div>
+    <div class="timer">الوقت: <span id="time">10</span></div>
+    <div class="result-message" id="result"></div>
+</div>
+
+<div class="level">المستوى: <span id="level">1</span></div>
+<div class="score">النقاط: <span id="score">0</span></div>
+
+<!-- صوت -->
+<audio id="spinSound" src="https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3"></audio>
+
+<script>
+
+let score=0;
+let level=1;
+let currentRotation=0;
+let timerInterval;
+let timeLeft=10;
+
+let questions=[
+{q:"sin(30°)",a:"0.5"},
+{q:"cos(60°)",a:"0.5"},
+{q:"tan(45°)",a:"1"},
+{q:"sin(90°)",a:"1"},
+{q:"cos(0°)",a:"1"},
+{q:"tan(0°)",a:"0"},
+{q:"sin(45°)",a:"0.71"},
+{q:"cos(45°)",a:"0.71"},
+{q:"tan(30°)",a:"0.58"},
+{q:"tan(60°)",a:"1.73"}
+];
+
+function spinWheel(){
+
+if(questions.length===0){
+    document.getElementById("result").innerText="🎉 انتهت اللعبة!";
+    return;
+}
+
+document.getElementById("spinSound").play();
+
+const randomIndex=Math.floor(Math.random()*questions.length);
+const degreesPerSection=360/10;
+const spinDegrees=360*5+(randomIndex*degreesPerSection);
+
+currentRotation+=spinDegrees;
+document.getElementById("wheel").style.transform="rotate("+currentRotation+"deg)";
+
+setTimeout(()=>{
+    showQuestion(randomIndex);
+},4000);
+}
+
+function showQuestion(index){
+
+document.getElementById("wheelContainer").style.display="none";
+document.getElementById("spinBtn").style.display="none";
+document.getElementById("question-box").style.display="block";
+
+const question=questions[index];
+
+document.getElementById("question").innerText="احسب "+question.q;
+
+let options=[question.a];
+
+while(options.length<4){
+let fake=(Math.random()*2).toFixed(2);
+if(!options.includes(fake)) options.push(fake);
+}
+
+options.sort(()=>Math.random()-0.5);
+
+const answersDiv=document.getElementById("answers");
+answersDiv.innerHTML="";
+
+options.forEach(option=>{
+const btn=document.createElement("button");
+btn.className="answer-btn";
+btn.innerText=option;
+btn.onclick=()=>checkAnswer(option,index);
+answersDiv.appendChild(btn);
+});
+
+startTimer(index);
+}
+
+function startTimer(index){
+timeLeft=10;
+document.getElementById("time").innerText=timeLeft;
+
+timerInterval=setInterval(()=>{
+timeLeft--;
+document.getElementById("time").innerText=timeLeft;
+
+if(timeLeft<=0){
+clearInterval(timerInterval);
+showResult(false,index);
+}
+},1000);
+}
+
+function checkAnswer(option,index){
+clearInterval(timerInterval);
+if(option===questions[index].a){
+score++;
+explode();
+showResult(true,index);
+}else{
+showResult(false,index);
+}
+document.getElementById("score").innerText=score;
+}
+
+function showResult(correct,index){
+
+const result=document.getElementById("result");
+
+if(correct){
+result.innerText="🔥 إجابة صحيحة!";
+}else{
+result.innerText="❌ إجابة خاطئة!";
+}
+
+setTimeout(()=>{
+questions.splice(index,1);
+document.getElementById("question-box").style.display="none";
+document.getElementById("wheelContainer").style.display="block";
+document.getElementById("spinBtn").style.display="inline-block";
+result.innerText="";
+if(score>=5) level=2;
+document.getElementById("level").innerText=level;
+},2000);
+}
+
+function explode(){
+for(let i=0;i<50;i++){
+let conf=document.createElement("div");
+conf.className="confetti";
+conf.style.left=Math.random()*100+"vw";
+conf.style.background="hsl("+Math.random()*360+",100%,50%)";
+document.body.appendChild(conf);
+setTimeout(()=>conf.remove(),3000);
+}
+}
+
+</script>
+
+</body>
+</html>
