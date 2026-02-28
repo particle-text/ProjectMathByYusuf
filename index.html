@@ -3,13 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎡 عجلة أبطال المثلثات</title>
+<title>🎡 عجلة أبطال sin cos tan 🎡</title>
 
-<!-- شعار الصفحة -->
 <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/2103/2103633.png">
 
 <style>
-
 body{
     margin:0;
     font-family:Arial;
@@ -24,7 +22,6 @@ h1{
     text-shadow:0 0 20px cyan;
 }
 
-/* صندوق النقاط الاحترافي */
 .score-box{
     position:absolute;
     top:20px;
@@ -37,7 +34,6 @@ h1{
     box-shadow:0 0 20px cyan;
 }
 
-/* العجلة */
 .wheel-container{
     position:relative;
     width:380px;
@@ -51,8 +47,8 @@ h1{
     border-radius:50%;
     border:8px solid white;
     position:relative;
-    transition:transform 0.1s linear;
-    box-shadow: 0 0 20px cyan, 0 0 40px magenta, 0 0 60px cyan;
+    box-shadow:0 0 20px cyan,0 0 40px magenta,0 0 60px cyan;
+    transition: transform 5s cubic-bezier(0.17, 0.67, 0.12, 1);
 }
 
 .pointer{
@@ -68,7 +64,6 @@ h1{
     top:50%;
     left:50%;
     transform:translate(-50%,-50%) scale(0);
-    background:rgba(0,0,0,0.95);
     padding:30px;
     border-radius:20px;
     width:320px;
@@ -122,7 +117,6 @@ button:hover{
         opacity:0;
     }
 }
-
 </style>
 </head>
 <body>
@@ -150,9 +144,7 @@ button:hover{
 
 let score=0;
 let rotation=0;
-let speed=0;
 let spinning=false;
-let selectedIndex=0;
 
 let questions=[
 {q:"sin(0)",a:"0"},
@@ -170,152 +162,123 @@ const wheel=document.getElementById("wheel");
 let colors=[];
 
 function drawWheel(){
+    wheel.innerHTML="";
+    let total=questions.length;
+    let angle=360/total;
 
-wheel.innerHTML="";
+    let gradient="conic-gradient(";
+    colors=[];
+    for(let i=0;i<total;i++){
+        let color=`hsl(${i*360/total},70%,60%)`;
+        colors.push(color);
+        gradient+=`${color} ${i*angle}deg ${(i+1)*angle}deg`;
+        if(i<total-1) gradient+=",";
+    }
+    gradient+=")";
+    wheel.style.background=gradient;
 
-let total=questions.length;
-let angle=360/total;
-
-let gradient="conic-gradient(";
-colors=[];
-for(let i=0;i<total;i++){
-let color=`hsl(${i*360/total},70%,60%)`;
-colors.push(color);
-gradient+=`${color} ${i*angle}deg ${(i+1)*angle}deg`;
-if(i<total-1) gradient+=",";
-}
-gradient+=")";
-wheel.style.background=gradient;
-
-for(let i=0;i<total;i++){
-
-let label=document.createElement("div");
-label.innerText=questions[i].q;
-label.style.position="absolute";
-label.style.left="50%";
-label.style.top="50%";
-label.style.transformOrigin="0 0";
-label.style.fontSize="14px";
-label.style.fontWeight="bold";
-label.style.color="black";
-
-/* كتابة طولية */
-label.style.transform=
-`rotate(${i*angle+angle/2}deg)
- translate(150px)
- rotate(180deg)`;
-
-wheel.appendChild(label);
-}
-
+    for(let i=0;i<total;i++){
+        let label=document.createElement("div");
+        label.innerText=questions[i].q;
+        label.style.position="absolute";
+        label.style.left="50%";
+        label.style.top="50%";
+        label.style.transformOrigin="0 0";
+        label.style.fontSize="14px";
+        label.style.fontWeight="bold";
+        label.style.color="black";
+        label.style.transform=`rotate(${i*angle+angle/2}deg) translate(150px) rotate(180deg)`;
+        wheel.appendChild(label);
+    }
 }
 
 drawWheel();
 
 function spinWheel(){
+    if(spinning || questions.length===0) return;
+    spinning=true;
+    document.getElementById("spinBtn").disabled=true;
 
-if(spinning || questions.length===0) return;
+    let total=questions.length;
+    let angle=360/total;
 
-spinning=true;
-document.getElementById("spinBtn").disabled=true;
+    let selectedIndex=Math.floor(Math.random()*total);
 
-selectedIndex=Math.floor(Math.random()*questions.length);
-speed=30;
+    let finalAngle = (360 - (selectedIndex*angle) - angle/2);
 
-animate();
-}
+    let spins = 5; // عدد اللفات الكاملة
+    let totalRotation = (360*spins) + finalAngle;
 
-function animate(){
+    rotation += totalRotation;
 
-rotation+=speed;
-wheel.style.transform=`rotate(${rotation}deg)`;
+    wheel.style.transform = `rotate(${rotation}deg)`;
 
-speed*=0.97;
-
-if(speed>0.3){
-requestAnimationFrame(animate);
-}else{
-
-spinning=false;
-
-let total=questions.length;
-let angle=360/total;
-let finalAngle=(360 - (selectedIndex*angle) - angle/2);
-rotation=Math.floor(rotation/360)*360 + finalAngle;
-wheel.style.transform=`rotate(${rotation}deg)`;
-
-setTimeout(()=>{
-showQuestion(selectedIndex);
-},800);
-}
+    setTimeout(()=>{
+        showQuestion(selectedIndex);
+        spinning=false;
+    },5000);
 }
 
 function showQuestion(index){
+    document.getElementById("question-box").classList.add("show");
+    document.getElementById("question-box").style.background = colors[index];
 
-document.getElementById("question-box").classList.add("show");
+    let question=questions[index];
+    document.getElementById("question").innerText="احسب "+question.q;
 
-/* لون خلفية السؤال مطابق للون قطعة العجلة */
-document.getElementById("question-box").style.background = colors[index];
+    let options=[question.a];
 
-let question=questions[index];
-document.getElementById("question").innerText="احسب "+question.q;
+    while(options.length<4){
+        let fake=(Math.random()*2).toFixed(2);
+        if(!options.includes(fake)) options.push(fake);
+    }
 
-let options=[question.a];
+    options.sort(()=>Math.random()-0.5);
 
-while(options.length<4){
-let fake=(Math.random()*2).toFixed(2);
-if(!options.includes(fake)) options.push(fake);
-}
+    let answers=document.getElementById("answers");
+    answers.innerHTML="";
 
-options.sort(()=>Math.random()-0.5);
-
-let answers=document.getElementById("answers");
-answers.innerHTML="";
-
-options.forEach(option=>{
-let btn=document.createElement("button");
-btn.className="answer-btn";
-btn.innerText=option;
-btn.onclick=()=>checkAnswer(option,index);
-answers.appendChild(btn);
-});
+    options.forEach(option=>{
+        let btn=document.createElement("button");
+        btn.className="answer-btn";
+        btn.innerText=option;
+        btn.onclick=()=>checkAnswer(option,index);
+        answers.appendChild(btn);
+    });
 }
 
 function checkAnswer(option,index){
 
-if(option===questions[index].a){
-score++;
-explode();
-document.getElementById("result").innerText="🔥 إجابة صحيحة!";
-}else{
-document.getElementById("result").innerText="❌ إجابة خاطئة!";
-}
+    if(option===questions[index].a){
+        score++;
+        explode();
+        document.getElementById("result").innerText="🔥 إجابة صحيحة!";
+    }else{
+        document.getElementById("result").innerText="❌ إجابة خاطئة!";
+    }
 
-document.getElementById("score").innerText=score;
+    document.getElementById("score").innerText=score;
 
-setTimeout(()=>{
-questions.splice(index,1);
-document.getElementById("question-box").classList.remove("show");
-document.getElementById("result").innerText="";
-document.getElementById("spinBtn").disabled=false;
-
-drawWheel();
-
-},2000);
+    setTimeout(()=>{
+        questions.splice(index,1);
+        document.getElementById("question-box").classList.remove("show");
+        document.getElementById("result").innerText="";
+        document.getElementById("spinBtn").disabled=false;
+        drawWheel();
+    },2000);
 }
 
 function explode(){
-for(let i=0;i<50;i++){
-let conf=document.createElement("div");
-conf.className="confetti";
-conf.style.left=Math.random()*100+"vw";
-conf.style.background="hsl("+Math.random()*360+",100%,50%)";
-document.body.appendChild(conf);
-setTimeout(()=>conf.remove(),3000);
-}
+    for(let i=0;i<50;i++){
+        let conf=document.createElement("div");
+        conf.className="confetti";
+        conf.style.left=Math.random()*100+"vw";
+        conf.style.background="hsl("+Math.random()*360+",100%,50%)";
+        document.body.appendChild(conf);
+        setTimeout(()=>conf.remove(),3000);
+    }
 }
 
 </script>
-
 </body>
 </html>
