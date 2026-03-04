@@ -3,48 +3,75 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Planet Heroes</title>
+<title>Planet Heroes Ultimate</title>
 
 <style>
 body{
 margin:0;
 overflow:hidden;
 font-family:'Comic Sans MS', cursive;
-background:linear-gradient(180deg,#6dd5fa,#2980b9);
-text-align:center;
+background:linear-gradient(180deg,#4facfe,#00f2fe);
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+flex-direction:column;
 color:white;
 }
 
-/* النجوم */
-.star{
+/* شاشة البداية */
+#startScreen{
 position:absolute;
-width:4px;
-height:4px;
-background:white;
-border-radius:50%;
-animation: twinkle 2s infinite alternate;
+width:100%;
+height:100%;
+background:linear-gradient(45deg,#ff9a9e,#fad0c4);
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+z-index:10;
 }
-@keyframes twinkle{
-from{opacity:0.2}
-to{opacity:1}
+
+#startScreen button{
+padding:15px 30px;
+font-size:22px;
+border:none;
+border-radius:20px;
+background:#ffcc00;
+cursor:pointer;
+}
+
+/* الكوكب */
+#planet{
+width:200px;
+height:200px;
+background:radial-gradient(circle,#2ecc71,#27ae60);
+border-radius:50%;
+position:relative;
+animation:rotate 20s linear infinite;
+box-shadow:0 0 30px rgba(0,0,0,0.4);
+}
+
+@keyframes rotate{
+from{transform:rotate(0deg)}
+to{transform:rotate(360deg)}
 }
 
 /* المركبة */
 #ship{
 position:absolute;
-width:80px;
-transition:1s;
+width:70px;
+transition:0.8s;
 }
 
-/* الصندوق */
-#ui{
-position:absolute;
-top:20px;
-width:100%;
+/* الأسئلة */
+#gameUI{
+margin-top:20px;
+text-align:center;
 }
 
-button{
-padding:12px 20px;
+button.option{
+padding:10px 20px;
 margin:5px;
 font-size:18px;
 border:none;
@@ -53,84 +80,93 @@ background:#ffcc00;
 cursor:pointer;
 transition:0.3s;
 }
-button:hover{
+button.option:hover{
 transform:scale(1.1);
 background:#ff9900;
+}
+
+#info{
+margin-top:10px;
+font-size:20px;
 }
 
 /* انفجار */
 .explosion{
 position:absolute;
 font-size:40px;
-animation: boom 0.8s forwards;
+animation:boom 0.8s forwards;
 }
+
 @keyframes boom{
 0%{transform:scale(0);opacity:1}
 100%{transform:scale(2);opacity:0}
 }
 
-/* طقس */
-.rain{
-position:absolute;
-width:2px;
-height:15px;
-background:white;
-animation: rainFall 0.7s linear infinite;
-}
-@keyframes rainFall{
-to{transform:translateY(800px)}
+/* عداد الوقت */
+#timer{
+font-size:22px;
+margin-top:10px;
+color:#ff0000;
 }
 </style>
 </head>
 
 <body>
 
-<div id="ui">
+<div id="startScreen">
 <h1>🚀 Planet Heroes 🌍</h1>
-<div id="info">النقاط: 0 | المستوى: 1 | الطاقة: 3</div>
-<div id="question"></div>
+<p>أنقذ الكوكب بحل الأسئلة!</p>
+<button onclick="startGame()">ابدأ اللعبة</button>
 </div>
 
+<div id="planetContainer">
+<div id="planet"></div>
 <img id="ship" src="https://cdn-icons-png.flaticon.com/512/3212/3212608.png">
+</div>
 
-<audio id="bgMusic" loop autoplay>
-<source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_1c9cce0d3e.mp3?filename=kids-game-112191.mp3">
-</audio>
+<div id="gameUI">
+<div id="question"></div>
+<div id="timer"></div>
+<div id="options"></div>
+<div id="info">النقاط: 0 | الطاقة: 3 | المستوى: 1</div>
+</div>
 
 <script>
 let score=0;
-let level=1;
 let energy=3;
+let level=1;
+let timeLeft=10;
+let timerInterval;
 
 const ship=document.getElementById("ship");
 ship.style.left="50%";
-ship.style.top="70%";
+ship.style.top="40%";
 
-/* نجوم */
-for(let i=0;i<100;i++){
-let s=document.createElement("div");
-s.className="star";
-s.style.left=Math.random()*window.innerWidth+"px";
-s.style.top=Math.random()*window.innerHeight+"px";
-document.body.appendChild(s);
+function startGame(){
+document.getElementById("startScreen").style.display="none";
+newQuestion();
+startTimer();
 }
 
-/* توليد سؤال */
+function startTimer(){
+timeLeft=10;
+document.getElementById("timer").innerText="الوقت: "+timeLeft;
+clearInterval(timerInterval);
+timerInterval=setInterval(()=>{
+timeLeft--;
+document.getElementById("timer").innerText="الوقت: "+timeLeft;
+if(timeLeft<=0){
+energy--;
+updateUI();
+newQuestion();
+timeLeft=10;
+}
+},1000);
+}
+
 function newQuestion(){
-let types=["sin","cos","latitude"];
-let type=types[Math.floor(Math.random()*types.length)];
-
-if(type==="latitude"){
-latitudeQuestion();
-}else{
-trigQuestion(type);
-}
-}
-
-/* سؤال مثلثات */
-function trigQuestion(type){
 let angle=[0,30,45,60,90][Math.floor(Math.random()*5)];
-let correct=(type==="sin"?Math.sin(angle*Math.PI/180):Math.cos(angle*Math.PI/180)).toFixed(2);
+let correct=Math.sin(angle*Math.PI/180).toFixed(2);
 
 let options=[correct];
 while(options.length<4){
@@ -139,61 +175,39 @@ if(!options.includes(fake)) options.push(fake);
 }
 options.sort(()=>Math.random()-0.5);
 
-document.getElementById("question").innerHTML=
-`ما قيمة ${type}(${angle}°) ؟<br>`+
-options.map(o=>`<button onclick="check('${o}','${correct}')">${o}</button>`).join("");
+document.getElementById("question").innerText=
+"ما قيمة sin("+angle+"°) ؟";
+
+document.getElementById("options").innerHTML=
+options.map(o=>`<button class="option" onclick="check('${o}','${correct}')">${o}</button>`).join("");
 }
 
-/* سؤال خطوط العرض */
-function latitudeQuestion(){
-let data=[
-{name:"خط الاستواء",value:"0°"},
-{name:"مدار السرطان",value:"23.5° شمالاً"},
-{name:"الدائرة القطبية",value:"66.5° شمالاً"}
-];
-let q=data[Math.floor(Math.random()*data.length)];
-
-let options=data.map(d=>d.value);
-options.sort(()=>Math.random()-0.5);
-
-document.getElementById("question").innerHTML=
-`أين يقع ${q.name} ؟<br>`+
-options.map(o=>`<button onclick="check('${o}','${q.value}')">${o}</button>`).join("");
-}
-
-/* تحقق */
 function check(sel,correct){
 if(sel===correct){
 score++;
-level=Math.floor(score/5)+1;
 explode();
 moveShip();
-weatherEffect();
 }else{
 energy--;
 }
-
 updateUI();
-
 if(energy<=0){
-alert("انتهت الطاقة! 😢");
+alert("انتهت اللعبة 😢");
 location.reload();
 }
-if(score>=20){
-alert("فزت باللعبة! 🎉🌍");
+if(score>=15){
+alert("فزت! 🎉");
 location.reload();
 }
-
-setTimeout(newQuestion,800);
+newQuestion();
 }
 
-/* تحديث */
 function updateUI(){
+level=Math.floor(score/5)+1;
 document.getElementById("info").innerText=
-`النقاط: ${score} | المستوى: ${level} | الطاقة: ${energy}`;
+`النقاط: ${score} | الطاقة: ${energy} | المستوى: ${level}`;
 }
 
-/* انفجار */
 function explode(){
 let e=document.createElement("div");
 e.className="explosion";
@@ -204,25 +218,10 @@ document.body.appendChild(e);
 setTimeout(()=>e.remove(),800);
 }
 
-/* تحريك المركبة */
 function moveShip(){
-ship.style.left=Math.random()*80+"%";
-ship.style.top=50+Math.random()*30+"%";
+ship.style.left=Math.random()*60+20+"%";
+ship.style.top=Math.random()*40+20+"%";
 }
-
-/* طقس */
-function weatherEffect(){
-for(let i=0;i<30;i++){
-let r=document.createElement("div");
-r.className="rain";
-r.style.left=Math.random()*window.innerWidth+"px";
-r.style.top="-20px";
-document.body.appendChild(r);
-setTimeout(()=>r.remove(),800);
-}
-}
-
-newQuestion();
 </script>
 
 </body>
