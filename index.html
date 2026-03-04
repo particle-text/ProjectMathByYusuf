@@ -2,240 +2,155 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>رحلة الكرة السحرية للأطفال</title>
+<title>Trigonometry Runner 3D</title>
 <style>
-  body {
-    margin: 0;
-    overflow: hidden;
-    font-family: Arial, sans-serif;
-    background: #87ceeb;
-  }
-  canvas {
-    display: block;
-    margin: 0 auto;
-  }
+  body { margin: 0; overflow: hidden; background: #000; }
   #info {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    background: rgba(255,255,255,0.7);
-    padding: 10px 15px;
-    border-radius: 10px;
-    font-weight: bold;
-    font-size: 16px;
+    position:absolute; top:10px; left:10px; color:white; font-family:Arial;
+    font-size:16px; background:rgba(0,0,0,0.5); padding:10px; border-radius:8px;
   }
-  button {
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 10px 20px;
-    font-size: 16px;
-    border: none;
-    border-radius: 10px;
-    background: #ffcc00;
-    cursor: pointer;
-    box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
-  }
-  button:hover { background: #ffdd33; }
 </style>
 </head>
 <body>
-<div id="info">استخدم الأسهم لتحريك الكرة السحرية! 🌟</div>
-<canvas id="gameCanvas" width="900" height="600"></canvas>
-<button id="resetBtn">إعادة اللعبة</button>
-
-<!-- مؤثر صوتي -->
-<audio id="starSound" src="https://freesound.org/data/previews/146/146729_2524560-lq.mp3"></audio>
-
+<div id="info">استخدم الأسهم للتحرك! اجمع النجوم وتجنب العقبات!</div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const width = canvas.width;
-const height = canvas.height;
 
-// ⚡ الكرة السحرية
-let ball = {
-  angle: 0,
-  radius: 25,
-  color: '#ff4444',
-  distance: 200
-};
+// ========================
+// إعداد المشهد والكاميرا
+// ========================
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x000000);
 
-// 🌍 الكوكب
-let planet = {
-  x: width/2,
-  y: height/2,
-  radius: 200
-};
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+camera.position.set(0,5,20);
 
-// ⭐ نجوم وأهداف متحركة عشوائياً
-let stars = [];
-for(let i=0;i<12;i++){
-  stars.push({
-    angle: Math.random()*Math.PI*2,
-    distance: planet.radius + 50 + Math.random()*50,
-    radius: 12,
-    collected: false,
-    speed: 0.002 + Math.random()*0.004,
-    color: `hsl(${Math.random()*360}, 100%, 60%)`
-  });
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// ========================
+// الإضاءة
+// ========================
+const ambientLight = new THREE.AmbientLight(0xffffff,0.6);
+scene.add(ambientLight);
+
+const directionalLight = new THREE.DirectionalLight(0xffffff,0.8);
+directionalLight.position.set(0,10,10);
+scene.add(directionalLight);
+
+// ========================
+// الطريق (منحنى sin/cos/tan)
+// ========================
+const roadPoints = [];
+const roadSegments = 200;
+const roadLength = 500;
+const roadGeometry = new THREE.BufferGeometry();
+
+for(let i=0;i<roadSegments;i++){
+    const x = (i/roadSegments)*roadLength - roadLength/2;
+    const y = 5*Math.sin(i*0.2); // يمكنك تغيير sin → cos أو tan
+    const z = 0;
+    roadPoints.push(new THREE.Vector3(x,y,z));
 }
 
-// 💨 غيوم متحركة
-let clouds = [];
-for(let i=0;i<6;i++){
-  clouds.push({
-    x: Math.random()*width,
-    y: Math.random()*150,
-    speed: 0.2 + Math.random()*0.3,
-    scale: 0.5 + Math.random()*0.5
-  });
+roadGeometry.setFromPoints(roadPoints);
+const roadMaterial = new THREE.LineBasicMaterial({color:0x00ffcc, linewidth:3});
+const road = new THREE.Line(roadGeometry, roadMaterial);
+scene.add(road);
+
+// ========================
+// اللاعب (كرة فضائية)
+// ========================
+const ballGeometry = new THREE.SphereGeometry(1,32,32);
+const ballMaterial = new THREE.MeshStandardMaterial({color:0xff4444, metalness:0.6, roughness:0.4});
+const ball = new THREE.Mesh(ballGeometry, ballMaterial);
+scene.add(ball);
+ball.position.set(roadPoints[0].x,roadPoints[0].y+1,roadPoints[0].z);
+
+// ========================
+// الأهداف (نجوم)
+// ========================
+const stars = [];
+for(let i=10;i<roadSegments;i+=15){
+  const starGeom = new THREE.SphereGeometry(0.5,16,16);
+  const starMat = new THREE.MeshStandardMaterial({color:0xffff00, emissive:0xffff00});
+  const star = new THREE.Mesh(starGeom, starMat);
+  star.position.set(roadPoints[i].x, roadPoints[i].y+2, roadPoints[i].z);
+  scene.add(star);
+  stars.push(star);
 }
 
-// 🔹 مؤثر صوتي عند جمع النجوم
-const starSound = document.getElementById('starSound');
-
-// 🔹 رسم الخلفية مع الغيوم
-function drawBackground(){
-  ctx.fillStyle = '#87ceeb';
-  ctx.fillRect(0,0,width,height);
-  clouds.forEach(cloud=>{
-    ctx.fillStyle = 'white';
-    ctx.beginPath();
-    ctx.ellipse(cloud.x,cloud.y,60*cloud.scale,40*cloud.scale,0,0,Math.PI*2);
-    ctx.fill();
-    cloud.x += cloud.speed;
-    if(cloud.x > width+100) cloud.x = -100;
-  });
+// ========================
+// العقبات (مكعبات)
+// ========================
+const obstacles = [];
+for(let i=5;i<roadSegments;i+=20){
+  const obsGeom = new THREE.BoxGeometry(1.5,1.5,1.5);
+  const obsMat = new THREE.MeshStandardMaterial({color:0xff0000});
+  const obs = new THREE.Mesh(obsGeom, obsMat);
+  obs.position.set(roadPoints[i].x, roadPoints[i].y+1, roadPoints[i].z + Math.sin(i*0.5)*2);
+  scene.add(obs);
+  obstacles.push(obs);
 }
 
-// 🔹 رسم الكوكب مع دوائر العرض
-function drawPlanet(){
-  ctx.beginPath();
-  ctx.arc(planet.x, planet.y, planet.radius, 0, Math.PI*2);
-  ctx.fillStyle = '#339933';
-  ctx.fill();
-  ctx.strokeStyle = '#006600';
-  ctx.lineWidth = 3;
-  ctx.stroke();
-  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-  ctx.lineWidth = 1.5;
-  for(let i=-2;i<=2;i++){
-    ctx.beginPath();
-    ctx.arc(planet.x, planet.y, planet.radius - i*30, 0, Math.PI*2);
-    ctx.stroke();
-  }
-}
+// ========================
+// التحكم
+// ========================
+let ballIndex = 0;
+const speed = 0.5;
+let moveLeft = false;
+let moveRight = false;
 
-// 🔹 رسم الكرة السحرية مع ذيل متلألئ ووجه
-function drawBall(){
-  ball.x = planet.x + ball.distance * Math.cos(ball.angle);
-  ball.y = planet.y + ball.distance * Math.sin(ball.angle);
-
-  // ذيل متلألئ
-  for(let i=0;i<5;i++){
-    ctx.beginPath();
-    ctx.arc(ball.x - i*8, ball.y, 10-i*2, 0, Math.PI*2);
-    ctx.fillStyle = `rgba(255,255,0,${0.5-i*0.1})`;
-    ctx.fill();
-  }
-
-  // الكرة
-  ctx.beginPath();
-  ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI*2);
-  ctx.fillStyle = ball.color;
-  ctx.fill();
-  ctx.strokeStyle = '#aa0000';
-  ctx.stroke();
-
-  // عيون مبتسمة
-  ctx.fillStyle = 'white';
-  ctx.beginPath();
-  ctx.arc(ball.x - 10, ball.y - 5, 5, 0, Math.PI*2);
-  ctx.arc(ball.x + 10, ball.y - 5, 5, 0, Math.PI*2);
-  ctx.fill();
-  ctx.fillStyle = 'black';
-  ctx.beginPath();
-  ctx.arc(ball.x - 10, ball.y - 5, 2, 0, Math.PI*2);
-  ctx.arc(ball.x + 10, ball.y - 5, 2, 0, Math.PI*2);
-  ctx.fill();
-  // ابتسامة
-  ctx.beginPath();
-  ctx.arc(ball.x, ball.y + 5, 10, 0, Math.PI);
-  ctx.strokeStyle = 'black';
-  ctx.stroke();
-}
-
-// 🔹 رسم النجوم والأشياء المتحركة
-function drawStars(){
-  stars.forEach(star=>{
-    star.angle += star.speed;
-    star.x = planet.x + star.distance * Math.cos(star.angle);
-    star.y = planet.y + star.distance * Math.sin(star.angle);
-    if(!star.collected){
-      ctx.beginPath();
-      ctx.arc(star.x, star.y, star.radius, 0, Math.PI*2);
-      ctx.fillStyle = star.color;
-      ctx.fill();
-      ctx.strokeStyle = 'orange';
-      ctx.stroke();
-    }
-  });
-}
-
-// 🔹 تحديث الكرة والتحقق من جمع النجوم
-function updateBall(){
-  stars.forEach(star=>{
-    const dx = ball.x - star.x;
-    const dy = ball.y - star.y;
-    if(!star.collected && Math.sqrt(dx*dx + dy*dy) < ball.radius + star.radius){
-      star.collected = true;
-      starSound.currentTime = 0;
-      starSound.play();
-      // تأثير انفجار نجمي صغير
-      for(let i=0;i<10;i++){
-        setTimeout(()=>{
-          ctx.beginPath();
-          ctx.arc(star.x + Math.random()*20-10, star.y + Math.random()*20-10, 5, 0, Math.PI*2);
-          ctx.fillStyle = 'rgba(255,255,255,0.8)';
-          ctx.fill();
-        }, i*50);
-      }
-    }
-  });
-}
-
-// 🔹 التحكم باللعبة
-document.addEventListener('keydown',(e)=>{
-  if(e.key==='ArrowRight') ball.angle += 0.05;
-  if(e.key==='ArrowLeft') ball.angle -= 0.05;
+document.addEventListener('keydown', (e)=>{
+    if(e.key==='ArrowLeft') moveLeft=true;
+    if(e.key==='ArrowRight') moveRight=true;
+});
+document.addEventListener('keyup', (e)=>{
+    if(e.key==='ArrowLeft') moveLeft=false;
+    if(e.key==='ArrowRight') moveRight=false;
 });
 
-// إعادة اللعبة
-document.getElementById('resetBtn').addEventListener('click',()=>{
-  ball.angle = 0;
-  stars.forEach(s=> s.collected=false);
-});
+// ========================
+// اللعبة
+// ========================
+function animate(){
+    requestAnimationFrame(animate);
 
-// 🔹 الرسم الرئيسي
-function draw(){
-  ctx.clearRect(0,0,width,height);
-  drawBackground();
-  drawPlanet();
-  drawStars();
-  drawBall();
+    // تحريك الكرة على الطريق
+    ballIndex += speed;
+    if(ballIndex>=roadPoints.length-1) ballIndex = 0;
+
+    const pos = roadPoints[Math.floor(ballIndex)];
+    ball.position.y = pos.y + 1;
+    ball.position.x = pos.x;
+    ball.position.z = pos.z;
+
+    // التحرك يمين ويسار
+    if(moveLeft) ball.position.z -=0.2;
+    if(moveRight) ball.position.z +=0.2;
+
+    // تحريك الكاميرا لمتابعة الكرة
+    camera.position.x = ball.position.x + 5;
+    camera.position.y = ball.position.y + 5;
+    camera.position.z = ball.position.z + 10;
+    camera.lookAt(ball.position);
+
+    // تحريك العقبات ديناميكياً باستخدام sin/cos
+    obstacles.forEach((obs,i)=>{
+        obs.position.z = Math.sin(Date.now()*0.002 + i)*2;
+    });
+
+    // تحريك النجوم بلطف للأعلى والأسفل
+    stars.forEach(star=>{
+        star.position.y += Math.sin(Date.now()*0.003)*0.02;
+    });
+
+    renderer.render(scene, camera);
 }
 
-// 🔹 حلقة اللعبة
-function gameLoop(){
-  updateBall();
-  draw();
-  requestAnimationFrame(gameLoop);
-}
+animate();
 
-gameLoop();
 </script>
 </body>
 </html>
