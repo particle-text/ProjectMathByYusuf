@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>رحلة الكرة السحرية</title>
+<title>رحلة الكرة حول الكوكب</title>
 <style>
   body {
     margin: 0;
-    background: #87ceeb; /* سماء زرقاء */
+    background: #87ceeb;
     overflow: hidden;
     font-family: Arial, sans-serif;
   }
@@ -39,15 +39,15 @@
     cursor: pointer;
     box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
   }
-  button:hover {
-    background: #ffdd33;
-  }
+  button:hover { background: #ffdd33; }
 </style>
 </head>
 <body>
-<div id="info">استخدم أسهم لوحة المفاتيح لتحريك الكرة! 🌟</div>
+<div id="info">استخدم أسهم لوحة المفاتيح لتحريك الكرة على الكوكب! 🌍✨</div>
 <canvas id="gameCanvas" width="800" height="600"></canvas>
 <button id="resetBtn">إعادة اللعبة</button>
+
+<audio id="starSound" src="https://freesound.org/data/previews/146/146729_2524560-lq.mp3"></audio>
 
 <script>
 const canvas = document.getElementById('gameCanvas');
@@ -57,45 +57,60 @@ const height = canvas.height;
 
 // ⚡ الكرة السحرية
 let ball = {
-  x: width/2,
-  y: height/2,
-  radius: 25,
   angle: 0,
-  speed: 0.05,
-  color: '#ff4444'
+  radius: 25,
+  color: '#ff4444',
+  distance: 200  // نصف قطر الكوكب
 };
 
-// ⭐ أهداف النجوم
-let stars = [
-  {x: 200, y: 100, radius: 15, collected: false},
-  {x: 600, y: 150, radius: 15, collected: false},
-  {x: 400, y: 500, radius: 15, collected: false},
-  {x: 150, y: 400, radius: 15, collected: false},
-];
+// 🌍 الكوكب
+let planet = {
+  x: width/2,
+  y: height/2,
+  radius: 200
+};
 
-// 🌥️ الغيوم المتحركة
-let clouds = [
-  {x: 100, y: 80, speed: 0.3},
-  {x: 400, y: 50, speed: 0.2},
-  {x: 700, y: 120, speed: 0.4},
-];
-
-// 🔹 رسم الخلفية (سماء + غيوم)
-function drawBackground() {
-  ctx.fillStyle = '#87ceeb';
-  ctx.fillRect(0, 0, width, height);
-  clouds.forEach(cloud => {
-    ctx.fillStyle = 'white';
-    ctx.beginPath();
-    ctx.ellipse(cloud.x, cloud.y, 60, 40, 0, 0, Math.PI*2);
-    ctx.fill();
-    cloud.x += cloud.speed;
-    if(cloud.x > width + 100) cloud.x = -100;
+// ⭐ النجوم (أهداف)
+let stars = [];
+for(let i=0;i<8;i++){
+  stars.push({
+    angle: Math.random()*Math.PI*2,
+    distance: planet.radius + 50 + Math.random()*50,
+    radius: 12,
+    collected: false,
+    speed: 0.002 + Math.random()*0.003
   });
 }
 
-// 🔹 رسم الكرة السحرية مع وجه مبتسم وذيل متلألئ
-function drawBall() {
+// 🔹 مؤثر صوتي عند جمع النجوم
+const starSound = document.getElementById('starSound');
+
+// 🔹 رسم الكوكب مع دوائر العرض
+function drawPlanet(){
+  // الكوكب
+  ctx.beginPath();
+  ctx.arc(planet.x, planet.y, planet.radius, 0, Math.PI*2);
+  ctx.fillStyle = '#339933';
+  ctx.fill();
+  ctx.strokeStyle = '#006600';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // دوائر العرض
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.lineWidth = 1.5;
+  for(let i=-2;i<=2;i++){
+    ctx.beginPath();
+    ctx.arc(planet.x, planet.y, planet.radius - i*30, 0, Math.PI*2);
+    ctx.stroke();
+  }
+}
+
+// 🔹 رسم الكرة السحرية على الكوكب
+function drawBall(){
+  ball.x = planet.x + ball.distance * Math.cos(ball.angle);
+  ball.y = planet.y + ball.distance * Math.sin(ball.angle);
+
   // ذيل متلألئ
   for(let i=0;i<5;i++){
     ctx.beginPath();
@@ -103,6 +118,7 @@ function drawBall() {
     ctx.fillStyle = 'rgba(255,255,0,'+(0.5-i*0.1)+')';
     ctx.fill();
   }
+
   // الكرة
   ctx.beginPath();
   ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI*2);
@@ -110,6 +126,7 @@ function drawBall() {
   ctx.fill();
   ctx.strokeStyle = '#aa0000';
   ctx.stroke();
+
   // عيون مبتسمة
   ctx.fillStyle = 'white';
   ctx.beginPath();
@@ -121,6 +138,7 @@ function drawBall() {
   ctx.arc(ball.x - 10, ball.y - 5, 2, 0, Math.PI*2);
   ctx.arc(ball.x + 10, ball.y - 5, 2, 0, Math.PI*2);
   ctx.fill();
+
   // ابتسامة
   ctx.beginPath();
   ctx.arc(ball.x, ball.y + 5, 10, 0, Math.PI);
@@ -128,9 +146,13 @@ function drawBall() {
   ctx.stroke();
 }
 
-// 🔹 رسم النجوم
-function drawStars() {
-  stars.forEach(star => {
+// 🔹 رسم النجوم على الكوكب
+function drawStars(){
+  stars.forEach(star=>{
+    star.angle += star.speed; // حركة عشوائية حول الكوكب
+    star.x = planet.x + star.distance * Math.cos(star.angle);
+    star.y = planet.y + star.distance * Math.sin(star.angle);
+
     if(!star.collected){
       ctx.beginPath();
       ctx.arc(star.x, star.y, star.radius, 0, Math.PI*2);
@@ -143,54 +165,60 @@ function drawStars() {
 }
 
 // 🔹 تحديث الكرة والتحقق من جمع النجوم
-function updateBall() {
-  // حركة على منحنى sin/cos (الكرة تتحرك أفقيًا حسب الزاوية)
-  ball.x = width/2 + 200 * Math.cos(ball.angle);
-  ball.y = height/2 + 150 * Math.sin(ball.angle);
-
-  // التحقق من جمع النجوم
-  stars.forEach(star => {
+function updateBall(){
+  stars.forEach(star=>{
     const dx = ball.x - star.x;
     const dy = ball.y - star.y;
     if(!star.collected && Math.sqrt(dx*dx + dy*dy) < ball.radius + star.radius){
       star.collected = true;
-      // تأثير انفجار نجمي صغير
-      for(let i=0;i<10;i++){
-        setTimeout(()=>{
-          ctx.beginPath();
-          ctx.arc(star.x + Math.random()*20-10, star.y + Math.random()*20-10, 5, 0, Math.PI*2);
-          ctx.fillStyle = 'rgba(255,255,0,0.8)';
-          ctx.fill();
-        }, i*50);
-      }
+      starSound.currentTime = 0;
+      starSound.play();
     }
   });
 }
 
 // 🔹 التحكم باللعبة
-document.addEventListener('keydown', (e)=>{
-  if(e.key === 'ArrowRight') ball.angle += ball.speed;
-  if(e.key === 'ArrowLeft') ball.angle -= ball.speed;
+document.addEventListener('keydown',(e)=>{
+  if(e.key==='ArrowRight') ball.angle += 0.05;
+  if(e.key==='ArrowLeft') ball.angle -= 0.05;
 });
 
 // إعادة اللعبة
-document.getElementById('resetBtn').addEventListener('click', ()=>{
+document.getElementById('resetBtn').addEventListener('click',()=>{
   ball.angle = 0;
-  ball.x = width/2;
-  ball.y = height/2;
   stars.forEach(s=> s.collected=false);
 });
 
+// 🔹 رسم الخلفية (سماء + غيوم متحركة)
+let clouds = [
+  {x:100,y:80,speed:0.3},
+  {x:400,y:50,speed:0.2},
+  {x:700,y:120,speed:0.4}
+];
+function drawBackground(){
+  ctx.fillStyle = '#87ceeb';
+  ctx.fillRect(0,0,width,height);
+  clouds.forEach(cloud=>{
+    ctx.fillStyle='white';
+    ctx.beginPath();
+    ctx.ellipse(cloud.x,cloud.y,60,40,0,0,Math.PI*2);
+    ctx.fill();
+    cloud.x += cloud.speed;
+    if(cloud.x>width+100) cloud.x=-100;
+  });
+}
+
 // 🔹 الرسم الرئيسي
-function draw() {
+function draw(){
   ctx.clearRect(0,0,width,height);
   drawBackground();
+  drawPlanet();
   drawStars();
   drawBall();
 }
 
 // 🔹 حلقة اللعبة
-function gameLoop() {
+function gameLoop(){
   updateBall();
   draw();
   requestAnimationFrame(gameLoop);
