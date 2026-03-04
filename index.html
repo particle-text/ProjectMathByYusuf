@@ -1,156 +1,163 @@
+
 <!DOCTYPE html>
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
-<title>Trigonometry Runner 3D</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مغامرة الكرة على الأرض الكروية</title>
 <style>
-  body { margin: 0; overflow: hidden; background: #000; }
+  body {
+    margin: 0;
+    background: linear-gradient(to bottom, #87ceeb, #f0f8ff);
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+  }
+  canvas {
+    display: block;
+    margin: 0 auto;
+    background: #a3d9a5;
+    border-radius: 50%;
+    box-shadow: 0 0 50px rgba(0,0,0,0.3);
+  }
   #info {
-    position:absolute; top:10px; left:10px; color:white; font-family:Arial;
-    font-size:16px; background:rgba(0,0,0,0.5); padding:10px; border-radius:8px;
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(255,255,255,0.8);
+    padding: 10px 15px;
+    border-radius: 10px;
+    font-weight: bold;
+    font-size: 16px;
+  }
+  button {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 10px;
+    background: #ffcc00;
+    cursor: pointer;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+  }
+  button:hover {
+    background: #ffdd33;
   }
 </style>
 </head>
 <body>
-<div id="info">استخدم الأسهم للتحرك! اجمع النجوم وتجنب العقبات!</div>
-<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+
+<div id="info">اضغط الأسهم لتحريك الكرة والوصول للأهداف!</div>
+<canvas id="gameCanvas" width="600" height="600"></canvas>
+<button id="resetBtn">إعادة اللعبة</button>
+
 <script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const width = canvas.width;
+const height = canvas.height;
 
-// ========================
-// إعداد المشهد والكاميرا
-// ========================
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x000000);
+let angle = 0;           // الزاوية للكرة
+let speed = 0.05;        // سرعة الحركة
+let ballRadius = 15;
+let ballX = width/2;
+let ballY = height/2;
+let score = 0;
 
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-camera.position.set(0,5,20);
+// أهداف على خطوط عرض مختلفة
+const targets = [
+  {x: width/2 + 100, y: height/2 - 100, radius: 10, hit: false},
+  {x: width/2 - 120, y: height/2 + 80, radius: 10, hit: false},
+  {x: width/2 + 50, y: height/2 + 150, radius: 10, hit: false},
+];
 
-const renderer = new THREE.WebGLRenderer({antialias:true});
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
-
-// ========================
-// الإضاءة
-// ========================
-const ambientLight = new THREE.AmbientLight(0xffffff,0.6);
-scene.add(ambientLight);
-
-const directionalLight = new THREE.DirectionalLight(0xffffff,0.8);
-directionalLight.position.set(0,10,10);
-scene.add(directionalLight);
-
-// ========================
-// الطريق (منحنى sin/cos/tan)
-// ========================
-const roadPoints = [];
-const roadSegments = 200;
-const roadLength = 500;
-const roadGeometry = new THREE.BufferGeometry();
-
-for(let i=0;i<roadSegments;i++){
-    const x = (i/roadSegments)*roadLength - roadLength/2;
-    const y = 5*Math.sin(i*0.2); // يمكنك تغيير sin → cos أو tan
-    const z = 0;
-    roadPoints.push(new THREE.Vector3(x,y,z));
+// 🎯 رسم خطوط العرض
+function drawLatitudeLines() {
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.lineWidth = 2;
+  for(let i=-2; i<=2; i++){
+    ctx.beginPath();
+    ctx.arc(width/2, height/2, 100 + i*40, 0, Math.PI*2);
+    ctx.stroke();
+  }
 }
 
-roadGeometry.setFromPoints(roadPoints);
-const roadMaterial = new THREE.LineBasicMaterial({color:0x00ffcc, linewidth:3});
-const road = new THREE.Line(roadGeometry, roadMaterial);
-scene.add(road);
-
-// ========================
-// اللاعب (كرة فضائية)
-// ========================
-const ballGeometry = new THREE.SphereGeometry(1,32,32);
-const ballMaterial = new THREE.MeshStandardMaterial({color:0xff4444, metalness:0.6, roughness:0.4});
-const ball = new THREE.Mesh(ballGeometry, ballMaterial);
-scene.add(ball);
-ball.position.set(roadPoints[0].x,roadPoints[0].y+1,roadPoints[0].z);
-
-// ========================
-// الأهداف (نجوم)
-// ========================
-const stars = [];
-for(let i=10;i<roadSegments;i+=15){
-  const starGeom = new THREE.SphereGeometry(0.5,16,16);
-  const starMat = new THREE.MeshStandardMaterial({color:0xffff00, emissive:0xffff00});
-  const star = new THREE.Mesh(starGeom, starMat);
-  star.position.set(roadPoints[i].x, roadPoints[i].y+2, roadPoints[i].z);
-  scene.add(star);
-  stars.push(star);
+// 🎯 رسم الكرة
+function drawBall() {
+  ctx.beginPath();
+  ctx.arc(ballX, ballY, ballRadius, 0, Math.PI*2);
+  ctx.fillStyle = '#ff4444';
+  ctx.fill();
+  ctx.strokeStyle = '#aa0000';
+  ctx.stroke();
 }
 
-// ========================
-// العقبات (مكعبات)
-// ========================
-const obstacles = [];
-for(let i=5;i<roadSegments;i+=20){
-  const obsGeom = new THREE.BoxGeometry(1.5,1.5,1.5);
-  const obsMat = new THREE.MeshStandardMaterial({color:0xff0000});
-  const obs = new THREE.Mesh(obsGeom, obsMat);
-  obs.position.set(roadPoints[i].x, roadPoints[i].y+1, roadPoints[i].z + Math.sin(i*0.5)*2);
-  scene.add(obs);
-  obstacles.push(obs);
+// 🎯 رسم الأهداف
+function drawTargets() {
+  targets.forEach(target => {
+    if(!target.hit){
+      ctx.beginPath();
+      ctx.arc(target.x, target.y, target.radius, 0, Math.PI*2);
+      ctx.fillStyle = '#ffdd00';
+      ctx.fill();
+      ctx.strokeStyle = '#aa8800';
+      ctx.stroke();
+    }
+  });
 }
 
-// ========================
-// التحكم
-// ========================
-let ballIndex = 0;
-const speed = 0.5;
-let moveLeft = false;
-let moveRight = false;
+// 🎯 تحديث الكرة وملاحظة الاصطدام
+function updateBall() {
+  // حركة بسيطة باستخدام sin/cos
+  ballX = width/2 + 150 * Math.cos(angle);
+  ballY = height/2 + 100 * Math.sin(angle);
 
+  // تحقق من الاصطدام مع الأهداف
+  targets.forEach(target => {
+    const dx = ballX - target.x;
+    const dy = ballY - target.y;
+    if(!target.hit && Math.sqrt(dx*dx + dy*dy) < ballRadius + target.radius){
+      target.hit = true;
+      score++;
+      alert('وصلت لهدف! 🎯 مجموع النقاط: ' + score);
+    }
+  });
+}
+
+// 🎯 الرسم الرئيسي
+function draw() {
+  ctx.clearRect(0,0,width,height);
+  drawLatitudeLines();
+  drawTargets();
+  drawBall();
+}
+
+// 🎯 التحكم باللعبة
 document.addEventListener('keydown', (e)=>{
-    if(e.key==='ArrowLeft') moveLeft=true;
-    if(e.key==='ArrowRight') moveRight=true;
-});
-document.addEventListener('keyup', (e)=>{
-    if(e.key==='ArrowLeft') moveLeft=false;
-    if(e.key==='ArrowRight') moveRight=false;
+  if(e.key === 'ArrowRight') angle += speed;
+  if(e.key === 'ArrowLeft') angle -= speed;
 });
 
-// ========================
-// اللعبة
-// ========================
-function animate(){
-    requestAnimationFrame(animate);
+// إعادة اللعبة
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  angle = 0;
+  ballX = width/2;
+  ballY = height/2;
+  targets.forEach(t=> t.hit=false);
+  score = 0;
+});
 
-    // تحريك الكرة على الطريق
-    ballIndex += speed;
-    if(ballIndex>=roadPoints.length-1) ballIndex = 0;
-
-    const pos = roadPoints[Math.floor(ballIndex)];
-    ball.position.y = pos.y + 1;
-    ball.position.x = pos.x;
-    ball.position.z = pos.z;
-
-    // التحرك يمين ويسار
-    if(moveLeft) ball.position.z -=0.2;
-    if(moveRight) ball.position.z +=0.2;
-
-    // تحريك الكاميرا لمتابعة الكرة
-    camera.position.x = ball.position.x + 5;
-    camera.position.y = ball.position.y + 5;
-    camera.position.z = ball.position.z + 10;
-    camera.lookAt(ball.position);
-
-    // تحريك العقبات ديناميكياً باستخدام sin/cos
-    obstacles.forEach((obs,i)=>{
-        obs.position.z = Math.sin(Date.now()*0.002 + i)*2;
-    });
-
-    // تحريك النجوم بلطف للأعلى والأسفل
-    stars.forEach(star=>{
-        star.position.y += Math.sin(Date.now()*0.003)*0.02;
-    });
-
-    renderer.render(scene, camera);
+// 🎯 حلقة اللعبة
+function gameLoop() {
+  updateBall();
+  draw();
+  requestAnimationFrame(gameLoop);
 }
 
-animate();
-
+gameLoop();
 </script>
+
 </body>
 </html>
