@@ -3,225 +3,200 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Planet Heroes Ultimate</title>
+<title>Guardians of Latitude & Trig</title>
 
 <style>
 body{
-margin:0;
-overflow:hidden;
-font-family:'Comic Sans MS', cursive;
-background:linear-gradient(180deg,#4facfe,#00f2fe);
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
-flex-direction:column;
-color:white;
+    margin:0;
+    overflow:hidden;
+    background: radial-gradient(circle at center, #001f3f, #000814);
+    font-family: 'Segoe UI', sans-serif;
+    color:white;
+    text-align:center;
 }
 
-/* شاشة البداية */
-#startScreen{
-position:absolute;
-width:100%;
-height:100%;
-background:linear-gradient(45deg,#ff9a9e,#fad0c4);
-display:flex;
-flex-direction:column;
-justify-content:center;
-align-items:center;
-z-index:10;
+h1{
+    position:absolute;
+    top:10px;
+    width:100%;
+    font-size:28px;
+    text-shadow:0 0 15px cyan;
 }
 
-#startScreen button{
-padding:15px 30px;
-font-size:22px;
-border:none;
-border-radius:20px;
-background:#ffcc00;
-cursor:pointer;
+#score{
+    position:absolute;
+    top:60px;
+    width:100%;
+    font-size:20px;
 }
 
-/* الكوكب */
-#planet{
-width:200px;
-height:200px;
-background:radial-gradient(circle,#2ecc71,#27ae60);
-border-radius:50%;
-position:relative;
-animation:rotate 20s linear infinite;
-box-shadow:0 0 30px rgba(0,0,0,0.4);
+canvas{
+    display:block;
+    margin:auto;
 }
 
-@keyframes rotate{
-from{transform:rotate(0deg)}
-to{transform:rotate(360deg)}
+#questionBox{
+    position:absolute;
+    bottom:80px;
+    width:100%;
+    font-size:22px;
 }
 
-/* المركبة */
-#ship{
-position:absolute;
-width:70px;
-transition:0.8s;
+button{
+    margin:5px;
+    padding:10px 20px;
+    font-size:18px;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    background:linear-gradient(45deg, #00f5ff, #0077ff);
+    color:white;
+    box-shadow:0 0 10px cyan;
+    transition:0.3s;
 }
 
-/* الأسئلة */
-#gameUI{
-margin-top:20px;
-text-align:center;
+button:hover{
+    transform:scale(1.1);
 }
 
-button.option{
-padding:10px 20px;
-margin:5px;
-font-size:18px;
-border:none;
-border-radius:20px;
-background:#ffcc00;
-cursor:pointer;
-transition:0.3s;
-}
-button.option:hover{
-transform:scale(1.1);
-background:#ff9900;
-}
-
-#info{
-margin-top:10px;
-font-size:20px;
-}
-
-/* انفجار */
-.explosion{
-position:absolute;
-font-size:40px;
-animation:boom 0.8s forwards;
-}
-
-@keyframes boom{
-0%{transform:scale(0);opacity:1}
-100%{transform:scale(2);opacity:0}
-}
-
-/* عداد الوقت */
-#timer{
-font-size:22px;
-margin-top:10px;
-color:#ff0000;
+#message{
+    position:absolute;
+    bottom:20px;
+    width:100%;
+    font-size:22px;
+    color:yellow;
 }
 </style>
 </head>
 
 <body>
 
-<div id="startScreen">
-<h1>🚀 Planet Heroes 🌍</h1>
-<p>أنقذ الكوكب بحل الأسئلة!</p>
-<button onclick="startGame()">ابدأ اللعبة</button>
-</div>
+<h1>🌍 Guardians of Latitude & Trig 🚀</h1>
+<div id="score">النقاط: 0 | الدرع: 3</div>
+<canvas id="gameCanvas"></canvas>
 
-<div id="planetContainer">
-<div id="planet"></div>
-<img id="ship" src="https://cdn-icons-png.flaticon.com/512/3212/3212608.png">
-</div>
-
-<div id="gameUI">
-<div id="question"></div>
-<div id="timer"></div>
-<div id="options"></div>
-<div id="info">النقاط: 0 | الطاقة: 3 | المستوى: 1</div>
-</div>
+<div id="questionBox"></div>
+<div id="message"></div>
 
 <script>
-let score=0;
-let energy=3;
-let level=1;
-let timeLeft=10;
-let timerInterval;
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-const ship=document.getElementById("ship");
-ship.style.left="50%";
-ship.style.top="40%";
+let score = 0;
+let shield = 3;
+let earthAngle = 0;
 
-function startGame(){
-document.getElementById("startScreen").style.display="none";
-newQuestion();
-startTimer();
-}
+function drawEarth(){
+    let x = canvas.width/2;
+    let y = canvas.height/2;
+    let radius = 180;
 
-function startTimer(){
-timeLeft=10;
-document.getElementById("timer").innerText="الوقت: "+timeLeft;
-clearInterval(timerInterval);
-timerInterval=setInterval(()=>{
-timeLeft--;
-document.getElementById("timer").innerText="الوقت: "+timeLeft;
-if(timeLeft<=0){
-energy--;
-updateUI();
-newQuestion();
-timeLeft=10;
-}
-},1000);
-}
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.rotate(earthAngle);
 
-function newQuestion(){
-let angle=[0,30,45,60,90][Math.floor(Math.random()*5)];
-let correct=Math.sin(angle*Math.PI/180).toFixed(2);
+    ctx.beginPath();
+    ctx.arc(0,0,radius,0,Math.PI*2);
+    ctx.fillStyle="#0077be";
+    ctx.fill();
 
-let options=[correct];
-while(options.length<4){
-let fake=(Math.random()).toFixed(2);
-if(!options.includes(fake)) options.push(fake);
-}
-options.sort(()=>Math.random()-0.5);
+    ctx.strokeStyle="white";
+    for(let lat=-60; lat<=60; lat+=30){
+        ctx.beginPath();
+        ctx.ellipse(0,0,radius,radius*Math.cos(lat*Math.PI/180),0,0,Math.PI*2);
+        ctx.stroke();
+    }
 
-document.getElementById("question").innerText=
-"ما قيمة sin("+angle+"°) ؟";
-
-document.getElementById("options").innerHTML=
-options.map(o=>`<button class="option" onclick="check('${o}','${correct}')">${o}</button>`).join("");
+    ctx.restore();
+    earthAngle += 0.002;
 }
 
-function check(sel,correct){
-if(sel===correct){
-score++;
-explode();
-moveShip();
-}else{
-energy--;
+function gameLoop(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    drawEarth();
+    requestAnimationFrame(gameLoop);
 }
-updateUI();
-if(energy<=0){
-alert("انتهت اللعبة 😢");
-location.reload();
-}
-if(score>=15){
-alert("فزت! 🎉");
-location.reload();
-}
-newQuestion();
+gameLoop();
+
+function randomTrigQuestion(){
+    let angle = [0,30,45,60,90][Math.floor(Math.random()*5)];
+    let type = ["sin","cos"][Math.floor(Math.random()*2)];
+    let correct;
+
+    if(type==="sin"){
+        correct = Math.sin(angle*Math.PI/180).toFixed(2);
+    }else{
+        correct = Math.cos(angle*Math.PI/180).toFixed(2);
+    }
+
+    let options = [correct];
+    while(options.length<4){
+        let fake = (Math.random()).toFixed(2);
+        if(!options.includes(fake)) options.push(fake);
+    }
+
+    options.sort(()=>Math.random()-0.5);
+
+    document.getElementById("questionBox").innerHTML =
+        `<div>احسب ${type}(${angle}°)</div>` +
+        options.map(o=>`<button onclick="checkAnswer('${o}','${correct}')">${o}</button>`).join("");
 }
 
-function updateUI(){
-level=Math.floor(score/5)+1;
-document.getElementById("info").innerText=
-`النقاط: ${score} | الطاقة: ${energy} | المستوى: ${level}`;
+function randomLatitudeQuestion(){
+    let latitudes = [
+        {name:"خط الاستواء", value:"0°"},
+        {name:"مدار السرطان", value:"23.5° شمالاً"},
+        {name:"مدار الجدي", value:"23.5° جنوباً"},
+        {name:"الدائرة القطبية الشمالية", value:"66.5° شمالاً"}
+    ];
+
+    let q = latitudes[Math.floor(Math.random()*latitudes.length)];
+
+    let options = latitudes.map(l=>l.value);
+    options.sort(()=>Math.random()-0.5);
+
+    document.getElementById("questionBox").innerHTML =
+        `<div>ما دائرة العرض الخاصة بـ ${q.name} ؟</div>` +
+        options.map(o=>`<button onclick="checkAnswer('${o}','${q.value}')">${o}</button>`).join("");
 }
 
-function explode(){
-let e=document.createElement("div");
-e.className="explosion";
-e.innerText="💥";
-e.style.left=ship.style.left;
-e.style.top=ship.style.top;
-document.body.appendChild(e);
-setTimeout(()=>e.remove(),800);
+function checkAnswer(selected, correct){
+    if(selected===correct){
+        score++;
+        document.getElementById("message").innerText="✅ إجابة صحيحة!";
+    }else{
+        shield--;
+        document.getElementById("message").innerText="❌ إجابة خاطئة!";
+    }
+
+    document.getElementById("score").innerText=
+        `النقاط: ${score} | الدرع: ${shield}`;
+
+    if(shield<=0){
+        alert("💥 انتهت اللعبة! حاول مرة أخرى.");
+        location.reload();
+    }
+
+    if(score>=10){
+        alert("🎉 لقد أنقذت الأرض! فوز رائع!");
+        location.reload();
+    }
+
+    setTimeout(nextQuestion,1000);
 }
 
-function moveShip(){
-ship.style.left=Math.random()*60+20+"%";
-ship.style.top=Math.random()*40+20+"%";
+function nextQuestion(){
+    document.getElementById("message").innerText="";
+    if(Math.random()>0.5){
+        randomTrigQuestion();
+    }else{
+        randomLatitudeQuestion();
+    }
 }
+
+nextQuestion();
 </script>
 
 </body>
