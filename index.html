@@ -3,20 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>مغامرة الكرة على الأرض الكروية</title>
+<title>رحلة الكرة السحرية</title>
 <style>
   body {
     margin: 0;
-    background: linear-gradient(to bottom, #87ceeb, #f0f8ff);
+    background: #87ceeb; /* سماء زرقاء */
     overflow: hidden;
     font-family: Arial, sans-serif;
   }
   canvas {
     display: block;
     margin: 0 auto;
-    background: #a3d9a5;
-    border-radius: 50%;
-    box-shadow: 0 0 50px rgba(0,0,0,0.3);
+    background: linear-gradient(to bottom, #87ceeb, #f0f8ff);
   }
   #info {
     position: absolute;
@@ -47,9 +45,8 @@
 </style>
 </head>
 <body>
-
-<div id="info">اضغط الأسهم لتحريك الكرة والوصول للأهداف!</div>
-<canvas id="gameCanvas" width="600" height="600"></canvas>
+<div id="info">استخدم أسهم لوحة المفاتيح لتحريك الكرة! 🌟</div>
+<canvas id="gameCanvas" width="800" height="600"></canvas>
 <button id="resetBtn">إعادة اللعبة</button>
 
 <script>
@@ -58,97 +55,141 @@ const ctx = canvas.getContext('2d');
 const width = canvas.width;
 const height = canvas.height;
 
-let angle = 0;           // الزاوية للكرة
-let speed = 0.05;        // سرعة الحركة
-let ballRadius = 15;
-let ballX = width/2;
-let ballY = height/2;
-let score = 0;
+// ⚡ الكرة السحرية
+let ball = {
+  x: width/2,
+  y: height/2,
+  radius: 25,
+  angle: 0,
+  speed: 0.05,
+  color: '#ff4444'
+};
 
-// أهداف على خطوط عرض مختلفة
-const targets = [
-  {x: width/2 + 100, y: height/2 - 100, radius: 10, hit: false},
-  {x: width/2 - 120, y: height/2 + 80, radius: 10, hit: false},
-  {x: width/2 + 50, y: height/2 + 150, radius: 10, hit: false},
+// ⭐ أهداف النجوم
+let stars = [
+  {x: 200, y: 100, radius: 15, collected: false},
+  {x: 600, y: 150, radius: 15, collected: false},
+  {x: 400, y: 500, radius: 15, collected: false},
+  {x: 150, y: 400, radius: 15, collected: false},
 ];
 
-// 🎯 رسم خطوط العرض
-function drawLatitudeLines() {
-  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-  ctx.lineWidth = 2;
-  for(let i=-2; i<=2; i++){
+// 🌥️ الغيوم المتحركة
+let clouds = [
+  {x: 100, y: 80, speed: 0.3},
+  {x: 400, y: 50, speed: 0.2},
+  {x: 700, y: 120, speed: 0.4},
+];
+
+// 🔹 رسم الخلفية (سماء + غيوم)
+function drawBackground() {
+  ctx.fillStyle = '#87ceeb';
+  ctx.fillRect(0, 0, width, height);
+  clouds.forEach(cloud => {
+    ctx.fillStyle = 'white';
     ctx.beginPath();
-    ctx.arc(width/2, height/2, 100 + i*40, 0, Math.PI*2);
-    ctx.stroke();
-  }
+    ctx.ellipse(cloud.x, cloud.y, 60, 40, 0, 0, Math.PI*2);
+    ctx.fill();
+    cloud.x += cloud.speed;
+    if(cloud.x > width + 100) cloud.x = -100;
+  });
 }
 
-// 🎯 رسم الكرة
+// 🔹 رسم الكرة السحرية مع وجه مبتسم وذيل متلألئ
 function drawBall() {
+  // ذيل متلألئ
+  for(let i=0;i<5;i++){
+    ctx.beginPath();
+    ctx.arc(ball.x - i*8, ball.y, 10-i*2, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255,255,0,'+(0.5-i*0.1)+')';
+    ctx.fill();
+  }
+  // الكرة
   ctx.beginPath();
-  ctx.arc(ballX, ballY, ballRadius, 0, Math.PI*2);
-  ctx.fillStyle = '#ff4444';
+  ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI*2);
+  ctx.fillStyle = ball.color;
   ctx.fill();
   ctx.strokeStyle = '#aa0000';
   ctx.stroke();
+  // عيون مبتسمة
+  ctx.fillStyle = 'white';
+  ctx.beginPath();
+  ctx.arc(ball.x - 10, ball.y - 5, 5, 0, Math.PI*2);
+  ctx.arc(ball.x + 10, ball.y - 5, 5, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = 'black';
+  ctx.beginPath();
+  ctx.arc(ball.x - 10, ball.y - 5, 2, 0, Math.PI*2);
+  ctx.arc(ball.x + 10, ball.y - 5, 2, 0, Math.PI*2);
+  ctx.fill();
+  // ابتسامة
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y + 5, 10, 0, Math.PI);
+  ctx.strokeStyle = 'black';
+  ctx.stroke();
 }
 
-// 🎯 رسم الأهداف
-function drawTargets() {
-  targets.forEach(target => {
-    if(!target.hit){
+// 🔹 رسم النجوم
+function drawStars() {
+  stars.forEach(star => {
+    if(!star.collected){
       ctx.beginPath();
-      ctx.arc(target.x, target.y, target.radius, 0, Math.PI*2);
-      ctx.fillStyle = '#ffdd00';
+      ctx.arc(star.x, star.y, star.radius, 0, Math.PI*2);
+      ctx.fillStyle = 'yellow';
       ctx.fill();
-      ctx.strokeStyle = '#aa8800';
+      ctx.strokeStyle = 'orange';
       ctx.stroke();
     }
   });
 }
 
-// 🎯 تحديث الكرة وملاحظة الاصطدام
+// 🔹 تحديث الكرة والتحقق من جمع النجوم
 function updateBall() {
-  // حركة بسيطة باستخدام sin/cos
-  ballX = width/2 + 150 * Math.cos(angle);
-  ballY = height/2 + 100 * Math.sin(angle);
+  // حركة على منحنى sin/cos (الكرة تتحرك أفقيًا حسب الزاوية)
+  ball.x = width/2 + 200 * Math.cos(ball.angle);
+  ball.y = height/2 + 150 * Math.sin(ball.angle);
 
-  // تحقق من الاصطدام مع الأهداف
-  targets.forEach(target => {
-    const dx = ballX - target.x;
-    const dy = ballY - target.y;
-    if(!target.hit && Math.sqrt(dx*dx + dy*dy) < ballRadius + target.radius){
-      target.hit = true;
-      score++;
-      alert('وصلت لهدف! 🎯 مجموع النقاط: ' + score);
+  // التحقق من جمع النجوم
+  stars.forEach(star => {
+    const dx = ball.x - star.x;
+    const dy = ball.y - star.y;
+    if(!star.collected && Math.sqrt(dx*dx + dy*dy) < ball.radius + star.radius){
+      star.collected = true;
+      // تأثير انفجار نجمي صغير
+      for(let i=0;i<10;i++){
+        setTimeout(()=>{
+          ctx.beginPath();
+          ctx.arc(star.x + Math.random()*20-10, star.y + Math.random()*20-10, 5, 0, Math.PI*2);
+          ctx.fillStyle = 'rgba(255,255,0,0.8)';
+          ctx.fill();
+        }, i*50);
+      }
     }
   });
 }
 
-// 🎯 الرسم الرئيسي
-function draw() {
-  ctx.clearRect(0,0,width,height);
-  drawLatitudeLines();
-  drawTargets();
-  drawBall();
-}
-
-// 🎯 التحكم باللعبة
+// 🔹 التحكم باللعبة
 document.addEventListener('keydown', (e)=>{
-  if(e.key === 'ArrowRight') angle += speed;
-  if(e.key === 'ArrowLeft') angle -= speed;
+  if(e.key === 'ArrowRight') ball.angle += ball.speed;
+  if(e.key === 'ArrowLeft') ball.angle -= ball.speed;
 });
 
 // إعادة اللعبة
 document.getElementById('resetBtn').addEventListener('click', ()=>{
-  angle = 0;
-  ballX = width/2;
-  ballY = height/2;
-  targets.forEach(t=> t.hit=false);
-  score = 0;
+  ball.angle = 0;
+  ball.x = width/2;
+  ball.y = height/2;
+  stars.forEach(s=> s.collected=false);
 });
 
-// 🎯 حلقة اللعبة
+// 🔹 الرسم الرئيسي
+function draw() {
+  ctx.clearRect(0,0,width,height);
+  drawBackground();
+  drawStars();
+  drawBall();
+}
+
+// 🔹 حلقة اللعبة
 function gameLoop() {
   updateBall();
   draw();
@@ -157,6 +198,5 @@ function gameLoop() {
 
 gameLoop();
 </script>
-
 </body>
 </html>
