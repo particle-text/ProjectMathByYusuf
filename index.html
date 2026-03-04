@@ -1,162 +1,227 @@
-
 <!DOCTYPE html>
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>مغامرة الكرة على الأرض الكروية</title>
+<title>Planet Heroes Ultimate</title>
+
 <style>
-  body {
-    margin: 0;
-    background: linear-gradient(to bottom, #87ceeb, #f0f8ff);
-    overflow: hidden;
-    font-family: Arial, sans-serif;
-  }
-  canvas {
-    display: block;
-    margin: 0 auto;
-    background: #a3d9a5;
-    border-radius: 50%;
-    box-shadow: 0 0 50px rgba(0,0,0,0.3);
-  }
-  #info {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    background: rgba(255,255,255,0.8);
-    padding: 10px 15px;
-    border-radius: 10px;
-    font-weight: bold;
-    font-size: 16px;
-  }
-  button {
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 10px 20px;
-    font-size: 16px;
-    border: none;
-    border-radius: 10px;
-    background: #ffcc00;
-    cursor: pointer;
-    box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
-  }
-  button:hover {
-    background: #ffdd33;
-  }
+body{
+margin:0;
+overflow:hidden;
+font-family:'Comic Sans MS', cursive;
+background:linear-gradient(180deg,#4facfe,#00f2fe);
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+flex-direction:column;
+color:white;
+}
+
+/* شاشة البداية */
+#startScreen{
+position:absolute;
+width:100%;
+height:100%;
+background:linear-gradient(45deg,#ff9a9e,#fad0c4);
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+z-index:10;
+}
+
+#startScreen button{
+padding:15px 30px;
+font-size:22px;
+border:none;
+border-radius:20px;
+background:#ffcc00;
+cursor:pointer;
+}
+
+/* الكوكب */
+#planet{
+width:200px;
+height:200px;
+background:radial-gradient(circle,#2ecc71,#27ae60);
+border-radius:50%;
+position:relative;
+animation:rotate 20s linear infinite;
+box-shadow:0 0 30px rgba(0,0,0,0.4);
+}
+
+@keyframes rotate{
+from{transform:rotate(0deg)}
+to{transform:rotate(360deg)}
+}
+
+/* المركبة */
+#ship{
+position:absolute;
+width:70px;
+transition:0.8s;
+}
+
+/* الأسئلة */
+#gameUI{
+margin-top:20px;
+text-align:center;
+}
+
+button.option{
+padding:10px 20px;
+margin:5px;
+font-size:18px;
+border:none;
+border-radius:20px;
+background:#ffcc00;
+cursor:pointer;
+transition:0.3s;
+}
+button.option:hover{
+transform:scale(1.1);
+background:#ff9900;
+}
+
+#info{
+margin-top:10px;
+font-size:20px;
+}
+
+/* انفجار */
+.explosion{
+position:absolute;
+font-size:40px;
+animation:boom 0.8s forwards;
+}
+
+@keyframes boom{
+0%{transform:scale(0);opacity:1}
+100%{transform:scale(2);opacity:0}
+}
+
+/* عداد الوقت */
+#timer{
+font-size:22px;
+margin-top:10px;
+color:#ff0000;
+}
 </style>
 </head>
+
 <body>
 
-<div id="info">اضغط الأسهم لتحريك الكرة والوصول للأهداف!</div>
-<canvas id="gameCanvas" width="600" height="600"></canvas>
-<button id="resetBtn">إعادة اللعبة</button>
+<div id="startScreen">
+<h1>🚀 Planet Heroes 🌍</h1>
+<p>أنقذ الكوكب بحل الأسئلة!</p>
+<button onclick="startGame()">ابدأ اللعبة</button>
+</div>
+
+<div id="planetContainer">
+<div id="planet"></div>
+<img id="ship" src="https://cdn-icons-png.flaticon.com/512/3212/3212608.png">
+</div>
+
+<div id="gameUI">
+<div id="question"></div>
+<div id="timer"></div>
+<div id="options"></div>
+<div id="info">النقاط: 0 | الطاقة: 3 | المستوى: 1</div>
+</div>
 
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const width = canvas.width;
-const height = canvas.height;
+let score=0;
+let energy=3;
+let level=1;
+let timeLeft=10;
+let timerInterval;
 
-let angle = 0;           // الزاوية للكرة
-let speed = 0.05;        // سرعة الحركة
-let ballRadius = 15;
-let ballX = width/2;
-let ballY = height/2;
-let score = 0;
+const ship=document.getElementById("ship");
+ship.style.left="50%";
+ship.style.top="40%";
 
-// أهداف على خطوط عرض مختلفة
-const targets = [
-  {x: width/2 + 100, y: height/2 - 100, radius: 10, hit: false},
-  {x: width/2 - 120, y: height/2 + 80, radius: 10, hit: false},
-  {x: width/2 + 50, y: height/2 + 150, radius: 10, hit: false},
-];
-
-// 🎯 رسم خطوط العرض
-function drawLatitudeLines() {
-  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-  ctx.lineWidth = 2;
-  for(let i=-2; i<=2; i++){
-    ctx.beginPath();
-    ctx.arc(width/2, height/2, 100 + i*40, 0, Math.PI*2);
-    ctx.stroke();
-  }
+function startGame(){
+document.getElementById("startScreen").style.display="none";
+newQuestion();
+startTimer();
 }
 
-// 🎯 رسم الكرة
-function drawBall() {
-  ctx.beginPath();
-  ctx.arc(ballX, ballY, ballRadius, 0, Math.PI*2);
-  ctx.fillStyle = '#ff4444';
-  ctx.fill();
-  ctx.strokeStyle = '#aa0000';
-  ctx.stroke();
+function startTimer(){
+timeLeft=10;
+document.getElementById("timer").innerText="الوقت: "+timeLeft;
+clearInterval(timerInterval);
+timerInterval=setInterval(()=>{
+timeLeft--;
+document.getElementById("timer").innerText="الوقت: "+timeLeft;
+if(timeLeft<=0){
+energy--;
+updateUI();
+newQuestion();
+timeLeft=10;
+}
+},1000);
 }
 
-// 🎯 رسم الأهداف
-function drawTargets() {
-  targets.forEach(target => {
-    if(!target.hit){
-      ctx.beginPath();
-      ctx.arc(target.x, target.y, target.radius, 0, Math.PI*2);
-      ctx.fillStyle = '#ffdd00';
-      ctx.fill();
-      ctx.strokeStyle = '#aa8800';
-      ctx.stroke();
-    }
-  });
+function newQuestion(){
+let angle=[0,30,45,60,90][Math.floor(Math.random()*5)];
+let correct=Math.sin(angle*Math.PI/180).toFixed(2);
+
+let options=[correct];
+while(options.length<4){
+let fake=(Math.random()).toFixed(2);
+if(!options.includes(fake)) options.push(fake);
+}
+options.sort(()=>Math.random()-0.5);
+
+document.getElementById("question").innerText=
+"ما قيمة sin("+angle+"°) ؟";
+
+document.getElementById("options").innerHTML=
+options.map(o=>`<button class="option" onclick="check('${o}','${correct}')">${o}</button>`).join("");
 }
 
-// 🎯 تحديث الكرة وملاحظة الاصطدام
-function updateBall() {
-  // حركة بسيطة باستخدام sin/cos
-  ballX = width/2 + 150 * Math.cos(angle);
-  ballY = height/2 + 100 * Math.sin(angle);
-
-  // تحقق من الاصطدام مع الأهداف
-  targets.forEach(target => {
-    const dx = ballX - target.x;
-    const dy = ballY - target.y;
-    if(!target.hit && Math.sqrt(dx*dx + dy*dy) < ballRadius + target.radius){
-      target.hit = true;
-      score++;
-      alert('وصلت لهدف! 🎯 مجموع النقاط: ' + score);
-    }
-  });
+function check(sel,correct){
+if(sel===correct){
+score++;
+explode();
+moveShip();
+}else{
+energy--;
+}
+updateUI();
+if(energy<=0){
+alert("انتهت اللعبة 😢");
+location.reload();
+}
+if(score>=15){
+alert("فزت! 🎉");
+location.reload();
+}
+newQuestion();
 }
 
-// 🎯 الرسم الرئيسي
-function draw() {
-  ctx.clearRect(0,0,width,height);
-  drawLatitudeLines();
-  drawTargets();
-  drawBall();
+function updateUI(){
+level=Math.floor(score/5)+1;
+document.getElementById("info").innerText=
+`النقاط: ${score} | الطاقة: ${energy} | المستوى: ${level}`;
 }
 
-// 🎯 التحكم باللعبة
-document.addEventListener('keydown', (e)=>{
-  if(e.key === 'ArrowRight') angle += speed;
-  if(e.key === 'ArrowLeft') angle -= speed;
-});
-
-// إعادة اللعبة
-document.getElementById('resetBtn').addEventListener('click', ()=>{
-  angle = 0;
-  ballX = width/2;
-  ballY = height/2;
-  targets.forEach(t=> t.hit=false);
-  score = 0;
-});
-
-// 🎯 حلقة اللعبة
-function gameLoop() {
-  updateBall();
-  draw();
-  requestAnimationFrame(gameLoop);
+function explode(){
+let e=document.createElement("div");
+e.className="explosion";
+e.innerText="💥";
+e.style.left=ship.style.left;
+e.style.top=ship.style.top;
+document.body.appendChild(e);
+setTimeout(()=>e.remove(),800);
 }
 
-gameLoop();
+function moveShip(){
+ship.style.left=Math.random()*60+20+"%";
+ship.style.top=Math.random()*40+20+"%";
+}
 </script>
 
 </body>
