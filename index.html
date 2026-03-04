@@ -3,166 +3,159 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🌍 Planet Heroes 3D</title>
-
-<!-- ثلاثي الأبعاد -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
-
+<title>مغامرة الكرة على الأرض الكروية</title>
 <style>
-body{margin:0;overflow:hidden;font-family:Arial;background:#111;color:white;}
-#ui{
-  position:absolute;top:10px;left:50%;transform:translateX(-50%);
-  text-align:center;
-}
-button.option{
-  margin:5px;padding:10px 20px;font-size:18px;
-  border:none;border-radius:15px;background:#ffcc00;color:#000;
-  cursor:pointer;transition:0.3s;
-}
-button.option:hover{background:#ff9900;transform:scale(1.1);}
-#scoreBoard{
-  margin-top:10px;font-size:20px;
-}
-.explosion{
-  position:absolute;font-size:40px;animation:boom 0.8s forwards;
-}
-@keyframes boom{
-0%{transform:scale(0);opacity:1}
-100%{transform:scale(2);opacity:0}
-}
+  body {
+    margin: 0;
+    background: linear-gradient(to bottom, #87ceeb, #f0f8ff);
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+  }
+  canvas {
+    display: block;
+    margin: 0 auto;
+    background: #a3d9a5;
+    border-radius: 50%;
+    box-shadow: 0 0 50px rgba(0,0,0,0.3);
+  }
+  #info {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(255,255,255,0.8);
+    padding: 10px 15px;
+    border-radius: 10px;
+    font-weight: bold;
+    font-size: 16px;
+  }
+  button {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 10px;
+    background: #ffcc00;
+    cursor: pointer;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+  }
+  button:hover {
+    background: #ffdd33;
+  }
 </style>
 </head>
 <body>
 
-<div id="ui">
-<h1>🌍 Planet Heroes 3D</h1>
-<div id="question"></div>
-<div id="options"></div>
-<div id="scoreBoard">النقاط: 0 | المستوى: 1</div>
-<audio id="clickSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
-</div>
+<div id="info">اضغط الأسهم لتحريك الكرة والوصول للأهداف!</div>
+<canvas id="gameCanvas" width="600" height="600"></canvas>
+<button id="resetBtn">إعادة اللعبة</button>
 
 <script>
-let score=0,level=1;
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const width = canvas.width;
+const height = canvas.height;
 
-// 🌍 إعداد الكوكب ثلاثي الأبعاد
-let scene=new THREE.Scene();
-let camera=new THREE.PerspectiveCamera(50,window.innerWidth/window.innerHeight,0.1,1000);
-let renderer=new THREE.WebGLRenderer({antialias:true});
-renderer.setSize(window.innerWidth,window.innerHeight);
-document.body.appendChild(renderer.domElement);
+let angle = 0;           // الزاوية للكرة
+let speed = 0.05;        // سرعة الحركة
+let ballRadius = 15;
+let ballX = width/2;
+let ballY = height/2;
+let score = 0;
 
-let light=new THREE.DirectionalLight(0xffffff,1);
-light.position.set(5,5,5);
-scene.add(light);
+// أهداف على خطوط عرض مختلفة
+const targets = [
+  {x: width/2 + 100, y: height/2 - 100, radius: 10, hit: false},
+  {x: width/2 - 120, y: height/2 + 80, radius: 10, hit: false},
+  {x: width/2 + 50, y: height/2 + 150, radius: 10, hit: false},
+];
 
-let planetGeometry=new THREE.SphereGeometry(2,64,64);
-let planetMaterial=new THREE.MeshStandardMaterial({
-  color:0x2ecc71,
-  wireframe:false,
-  metalness:0.3,
-  roughness:0.7
-});
-let planet=new THREE.Mesh(planetGeometry,planetMaterial);
-scene.add(planet);
-
-// خطوط العرض والخريطة
-let latLines=[];
-for(let i=-80;i<=80;i+=20){
-  let latGeo=new THREE.CircleGeometry(2*Math.cos(THREE.MathUtils.degToRad(i)),64);
-  latGeo.vertices.shift(); // remove center
-  let line=new THREE.Line(latGeo,new THREE.LineBasicMaterial({color:0xffffff}));
-  line.rotation.x=Math.PI/2;
-  planet.add(line);
-  latLines.push(line);
+// 🎯 رسم خطوط العرض
+function drawLatitudeLines() {
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.lineWidth = 2;
+  for(let i=-2; i<=2; i++){
+    ctx.beginPath();
+    ctx.arc(width/2, height/2, 100 + i*40, 0, Math.PI*2);
+    ctx.stroke();
+  }
 }
 
-camera.position.z=6;
+// 🎯 رسم الكرة
+function drawBall() {
+  ctx.beginPath();
+  ctx.arc(ballX, ballY, ballRadius, 0, Math.PI*2);
+  ctx.fillStyle = '#ff4444';
+  ctx.fill();
+  ctx.strokeStyle = '#aa0000';
+  ctx.stroke();
+}
 
-// دوران الكوكب بالماوس
-let isDragging=false;
-let previousMousePosition={x:0,y:0};
-renderer.domElement.addEventListener('mousedown',e=>{isDragging=true;});
-renderer.domElement.addEventListener('mouseup',e=>{isDragging=false;});
-renderer.domElement.addEventListener('mousemove',e=>{
-  if(isDragging){
-    let deltaX=e.movementX||e.mozMovementX||e.webkitMovementX||0;
-    planet.rotation.y+=deltaX*0.005;
-  }
-});
-
-// 🚀 المركبة
-let ship=document.createElement('img');
-ship.src="https://cdn-icons-png.flaticon.com/512/3212/3212608.png";
-ship.style.position='absolute';
-ship.style.width='50px';
-ship.style.left='50%';
-ship.style.top='50%';
-document.body.appendChild(ship);
-
-// 🧮 الأسئلة
-let questions=[{q:"sin(0°)",a:"0"},{q:"cos(0°)",a:"1"},{q:"tan(0°)",a:"0"},
-{q:"sin(30°)",a:"0.5"},{q:"cos(60°)",a:"0.5"},{q:"tan(45°)",a:"1"},
-{q:"sin(45°)",a:"0.71"},{q:"cos(45°)",a:"0.71"},{q:"sin(90°)",a:"1"},{q:"cos(90°)",a:"0"}];
-
-function newQuestion(){
-  let idx=Math.floor(Math.random()*questions.length);
-  let q=questions[idx];
-  document.getElementById('question').innerText="احسب "+q.q;
-  let opts=[q.a];
-  while(opts.length<4){
-    let fake=(Math.random()*2).toFixed(2);
-    if(!opts.includes(fake)) opts.push(fake);
-  }
-  opts.sort(()=>Math.random()-0.5);
-  document.getElementById('options').innerHTML='';
-  opts.forEach(o=>{
-    let btn=document.createElement('button');
-    btn.className='option';
-    btn.innerText=o;
-    btn.onclick=()=>checkAnswer(o,q.a);
-    document.getElementById('options').appendChild(btn);
+// 🎯 رسم الأهداف
+function drawTargets() {
+  targets.forEach(target => {
+    if(!target.hit){
+      ctx.beginPath();
+      ctx.arc(target.x, target.y, target.radius, 0, Math.PI*2);
+      ctx.fillStyle = '#ffdd00';
+      ctx.fill();
+      ctx.strokeStyle = '#aa8800';
+      ctx.stroke();
+    }
   });
 }
 
-function checkAnswer(sel,correct){
-  document.getElementById('clickSound').play();
-  if(sel===correct){
-    score++;
-    explode();
-    moveShip();
-  } else { score=Math.max(0,score-1);}
-  level=Math.floor(score/5)+1;
-  document.getElementById('scoreBoard').innerText=`النقاط: ${score} | المستوى: ${level}`;
-  newQuestion();
+// 🎯 تحديث الكرة وملاحظة الاصطدام
+function updateBall() {
+  // حركة بسيطة باستخدام sin/cos
+  ballX = width/2 + 150 * Math.cos(angle);
+  ballY = height/2 + 100 * Math.sin(angle);
+
+  // تحقق من الاصطدام مع الأهداف
+  targets.forEach(target => {
+    const dx = ballX - target.x;
+    const dy = ballY - target.y;
+    if(!target.hit && Math.sqrt(dx*dx + dy*dy) < ballRadius + target.radius){
+      target.hit = true;
+      score++;
+      alert('وصلت لهدف! 🎯 مجموع النقاط: ' + score);
+    }
+  });
 }
 
-// انفجار عند الإجابة الصحيحة
-function explode(){
-  let e=document.createElement('div');
-  e.className='explosion';
-  e.innerText='💥';
-  e.style.left=ship.style.left;
-  e.style.top=ship.style.top;
-  document.body.appendChild(e);
-  setTimeout(()=>e.remove(),800);
+// 🎯 الرسم الرئيسي
+function draw() {
+  ctx.clearRect(0,0,width,height);
+  drawLatitudeLines();
+  drawTargets();
+  drawBall();
 }
 
-// تحريك المركبة
-function moveShip(){
-  ship.style.left=Math.random()*70+15+'%';
-  ship.style.top=Math.random()*50+20+'%';
+// 🎯 التحكم باللعبة
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'ArrowRight') angle += speed;
+  if(e.key === 'ArrowLeft') angle -= speed;
+});
+
+// إعادة اللعبة
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  angle = 0;
+  ballX = width/2;
+  ballY = height/2;
+  targets.forEach(t=> t.hit=false);
+  score = 0;
+});
+
+// 🎯 حلقة اللعبة
+function gameLoop() {
+  updateBall();
+  draw();
+  requestAnimationFrame(gameLoop);
 }
 
-// رسم المشهد
-function animate(){
-  requestAnimationFrame(animate);
-  renderer.render(scene,camera);
-}
-animate();
-
-// بدء السؤال الأول
-newQuestion();
+gameLoop();
 </script>
 
 </body>
