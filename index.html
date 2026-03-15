@@ -1,34 +1,217 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-<meta charset="UTF-8">
-<title>Trig Space Mission</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <title>لعبة الكواكب الفضائية</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Tahoma, sans-serif;
+      background: linear-gradient(#000022, #000000);
+      color: white;
+      text-align: center;
+      overflow: hidden;
+    }
+    #instructions {
+      position: absolute;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,50,0.85);
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 0 20px #00f;
+    }
+    button {
+      padding: 12px 25px;
+      font-size: 18px;
+      cursor: pointer;
+      margin-top: 15px;
+      border: none;
+      border-radius: 8px;
+      background: #00aaff;
+      color: white;
+      transition: 0.3s;
+    }
+    button:hover {
+      background: #0088cc;
+    }
+    canvas {
+      display: none;
+      background: radial-gradient(#000033, #000011);
+    }
+    #questionBox {
+      display: none;
+      position: absolute;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,50,0.9);
+      padding: 25px;
+      border-radius: 12px;
+      width: 420px;
+      color: white;
+      box-shadow: 0 0 15px #0ff;
+    }
+    #questionBox button {
+      display: block;
+      margin: 10px auto;
+      width: 80%;
+    }
+  </style>
 </head>
-
 <body>
+  <div id="instructions">
+    <h1>🚀 Trig Space Mission</h1>
+    <p>مهمتك السفر عبر الكواكب وتجنب النيازك ثم الهبوط على الكوكب والإجابة على أسئلة عن (sin, cos, tan).</p>
+    <button onclick="startGame()">بدء اللعبة</button>
+  </div>
 
-<div id="menu">
-<h1>🚀 Trig Space Mission</h1>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <div id="questionBox"></div>
 
-<p>
-مهمتك السفر عبر الكواكب
-وحل أسئلة sin cos tan
-</p>
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const instructions = document.getElementById("instructions");
+    const questionBox = document.getElementById("questionBox");
 
-<p>
-تجنب النيازك في الفضاء
-ثم اهبط على الكوكب
-وأجب على الأسئلة.
-</p>
+    let spaceship = {x: 400, y: 500, w: 50, h: 50, img: new Image()};
+    spaceship.img.src = "spaceship.png"; // صورة المركبة
+    let meteors = [];
+    let meteorImg = new Image();
+    meteorImg.src = "meteor.png"; // صورة النيزك
+    let stage = 0;
+    let score = 0;
+    let inFlight = false;
 
-<button id="startBtn">بدء اللعبة</button>
-</div>
+    const planets = [
+      {name:"عطارد", img:"planet1.jpg", question:"ما قيمة sin(90°) ؟", options:["0","1"], correct:"1"},
+      {name:"الزهرة", img:"planet2.jpg", question:"ما قيمة cos(0°) ؟", options:["0","1"], correct:"1"},
+      {name:"الأرض", img:"planet3.jpg", question:"ما قيمة tan(45°) ؟", options:["1","0"], correct:"1"},
+      {name:"المريخ", img:"planet4.jpg", question:"ما قيمة sin(0°) ؟", options:["0","1"], correct:"0"},
+      {name:"المشتري", img:"planet5.jpg", question:"ما قيمة cos(90°) ؟", options:["0","1"], correct:"0"},
+      {name:"زحل", img:"planet6.jpg", question:"ما قيمة tan(0°) ؟", options:["0","1"], correct:"0"},
+      {name:"أورانوس", img:"planet7.jpg", question:"ما قيمة sin(30°) ؟", options:["0.5","1"], correct:"0.5"},
+      {name:"نبتون", img:"planet8.jpg", question:"ما قيمة cos(60°) ؟", options:["0.5","1"], correct:"0.5"}
+    ];
 
-<div id="game"></div>
+    let keys = {};
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
-<script src="game.js"></script>
+    function startGame() {
+      instructions.style.display = "none";
+      canvas.style.display = "block";
+      stage = 0;
+      score = 0;
+      nextStage();
+      requestAnimationFrame(gameLoop);
+    }
 
+    function nextStage() {
+      meteors = [];
+      stage++;
+      if(stage > planets.length){
+        endGame();
+        return;
+      }
+      for(let i=0;i<8;i++){
+        meteors.push({x:Math.random()*760,y:-Math.random()*600,w:40,h:40,speed:2+Math.random()*3});
+      }
+      spaceship.x=400; spaceship.y=500;
+      inFlight = true;
+      canvas.style.background = "radial-gradient(#000033, #000011)";
+    }
+
+    function gameLoop(){
+      ctx.clearRect(0,0,800,600);
+      if(inFlight){
+        drawStars();
+        drawSpaceship();
+        updateMeteors();
+        checkWin();
+      }
+      requestAnimationFrame(gameLoop);
+    }
+
+    function drawStars(){
+      for(let i=0;i<50;i++){
+        ctx.fillStyle="white";
+        ctx.fillRect(Math.random()*800,Math.random()*600,2,2);
+      }
+    }
+
+    function drawSpaceship(){
+      ctx.drawImage(spaceship.img, spaceship.x, spaceship.y, spaceship.w, spaceship.h);
+    }
+
+    function updateMeteors(){
+      meteors.forEach(m=>{
+        m.y+=m.speed;
+        if(m.y>600) m.y=-20;
+        ctx.drawImage(meteorImg,m.x,m.y,m.w,m.h);
+        if(spaceship.x < m.x+m.w &&
+           spaceship.x+spaceship.w > m.x &&
+           spaceship.y < m.y+m.h &&
+           spaceship.y+spaceship.h > m.y){
+          loseStage();
+        }
+      });
+    }
+
+    function checkWin(){
+      if(spaceship.y<=0){
+        inFlight=false;
+        landOnPlanet();
+      }
+    }
+
+    function loseStage(){
+      alert("💥 خسرت المرحلة! حاول مرة أخرى");
+      nextStage();
+    }
+
+    function landOnPlanet(){
+      let planet = planets[stage-1];
+      canvas.style.background = `url(${planet.img}) no-repeat center/cover`;
+      setTimeout(()=>showQuestion(planet),1500);
+    }
+
+    function showQuestion(planet){
+      questionBox.style.display="block";
+      questionBox.innerHTML = `<h2>هبطت على كوكب ${planet.name}</h2>
+        <p>${planet.question}</p>` +
+        planet.options.map(opt=>`<button onclick="answer('${opt}','${planet.correct}')">${opt}</button>`).join("");
+    }
+
+    function answer(choice,correct){
+      if(choice===correct) score++;
+      questionBox.style.display="none";
+      nextStage();
+    }
+
+    function endGame(){
+      canvas.style.display="none";
+      questionBox.style.display="block";
+      let rate = Math.round((score/planets.length)*100);
+      questionBox.innerHTML = `<h2>🎉 انتهت اللعبة!</h2>
+        <p>إجاباتك الصحيحة: ${score} من ${planets.length}</p>
+        <p>معدل النجاح: ${rate}%</p>
+        <button onclick="location.reload()">إعادة اللعب</button>`;
+    }
+
+    window.addEventListener("keydown",e=>{keys[e.key]=true;});
+    window.addEventListener("keyup",e=>{keys[e.key]=false;});
+    function moveSpaceship(){
+      if(keys["ArrowLeft"]) spaceship.x-=5;
+      if(keys["ArrowRight"]) spaceship.x+=5;
+      if(keys["ArrowUp"]) spaceship.y-=5;
+      if(keys["ArrowDown"]) spaceship.y+=5;
+      if(spaceship.x<0) spaceship.x=0;
+      if(spaceship.x>760) spaceship.x=760;
+      if(spaceship.y<0) spaceship.y=0;
+      if(spaceship.y>560) spaceship.y=560;
+    }
+    setInterval(moveSpaceship,30);
+  </script>
 </body>
 </html>
